@@ -55,10 +55,12 @@ assert VERSION in ("v1", "v2"), f"Unknown version: {VERSION}"
 
 _suffix = "" if VERSION == "v1" else "_" + VERSION
 STATE = HERE / f"paper_state{_suffix}.json"
+HISTORY_CACHE_FILE = HERE / f"paper_history_cache{_suffix}.json"  # large, gitignored
 TRADE_LOG = HERE / f"paper_trades{_suffix}.jsonl"
 SIGNAL_LOG = HERE / f"paper_signals{_suffix}.jsonl"
 CYCLE_LOG = HERE / f"paper_cycles{_suffix}.jsonl"
 DAILY_LOG = HERE / f"paper_daily{_suffix}.csv"
+SNAPSHOT_DIR = HERE / f"snapshots{_suffix}"
 
 GAMMA = "https://gamma-api.polymarket.com"
 CLOB = "https://clob.polymarket.com"
@@ -178,22 +180,84 @@ def append_jsonl(path, obj):
 # STATE
 # ────────────────────────────────────────────────────────────────────────
 def load_state():
-    if STATE.exists():
-        try:
-            return json.loads(STATE.read_text())
-        except json.JSONDecodeError:
-            pass
-    return {
+    state = {
         "universe_ts": 0,
-        "universe": [],     # list of market_id
-        "positions": {},    # market_id -> position dict
-        "history_cache": {},  # market_id -> {"ts": int, "history": [...]}
+        "universe": [],
+        "positions": {},
+        "history_cache": {},
         "cycle": 0,
         "started_at": now_iso(),
     }
+    if STATE.exists():
+        try:
+            state.update(json.loads(STATE.read_text()))
+        except json.JSONDecodeError:
+            pass
+    # Load history cache from separate file (gitignored, kept local)
+    if HISTORY_CACHE_FILE.exists():
+        try:
+            state["history_cache"] = json.loads(HISTORY_CACHE_FILE.read_text())
+        except json.JSONDecodeError:
+            pass
+    return state
 
 def save_state(state):
-    STATE.write_text(json.dumps(state, indent=2, default=str))
+    """Write slim state (no history_cache) to STATE for commit;
+       write history_cache separately to gitignored file."""
+    cache = state.get("history_cache", {})
+    slim = {k: v for k, v in state.items() if k != "history_cache"}
+    STATE.write_text(json.dumps(slim, indent=2, default=str))
+    # Save cache separately (large; gitignored)
+    try:
+        HISTORY_CACHE_FILE.write_text(json.dumps(cache, default=str))
+    except OSError:
+        pass
+
+def save_daily_snapshot(state):
+    """Write a daily snapshot if today's doesn't exist yet."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    SNAPSHOT_DIR.mkdir(exist_ok=True)
+    path = SNAPSHOT_DIR / f"{today}.json"
+    if path.exists():
+        return  # already snapshotted today
+    snapshot = {
+        "date": today,
+        "ts": now_ts(),
+        "cycle": state.get("cycle", 0),
+        "universe_size": len(state.get("universe", [])),
+        "open_positions_count": len(state.get("positions", {})),
+        "open_positions_summary": [
+            {
+                "market_id": mid,
+                "question": p.get("question", "")[:100],
+                "entry_z": p.get("entry_z"),
+                "entry_exec_price": p.get("entry_exec_price"),
+                "direction": p.get("direction"),
+                "shares": p.get("shares"),
+                "held_hours": (now_ts() - p.get("entry_ts", 0)) / 3600,
+                "clv_value": p.get("clv_value"),
+                "dte": p.get("dte"),
+            } for mid, p in state.get("positions", {}).items()
+        ],
+    }
+    # Stats from trade log up to now
+    if TRADE_LOG.exists():
+        try:
+            trades = []
+            with open(TRADE_LOG) as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try: trades.append(json.loads(line))
+                        except json.JSONDecodeError: pass
+            if trades:
+                pnls = [t.get("net_pnl_usd", 0) for t in trades]
+                snapshot["trades_total"] = len(trades)
+                snapshot["pnl_cumulative"] = sum(pnls)
+                snapshot["win_rate"] = sum(1 for p in pnls if p > 0) / len(pnls) * 100
+        except OSError:
+            pass
+    path.write_text(json.dumps(snapshot, indent=2, default=str))
 
 # ────────────────────────────────────────────────────────────────────────
 # UNIVERSE
@@ -365,7 +429,21 @@ def compute_signal(prices, window):
         return None
     current = float(prices[-1])
     z = (current - mu) / sd
-    return {"z": z, "mu": mu, "sd": sd, "current": current}
+    return {"z": z, "mu": mu, "sd": sd, "current": current,
+            "window_prices": [round(float(p), 4) for p in win]}
+
+def _book_top_n(book, n=5):
+    """Compact snapshot of top-N orderbook levels for trade record."""
+    if not book:
+        return None
+    def slim(orders, key_fn):
+        if not orders: return []
+        sorted_o = sorted(orders, key=key_fn)[:n]
+        return [{"p": round(float(o.get("price", 0)), 4), "s": round(float(o.get("size", 0)), 2)} for o in sorted_o]
+    return {
+        "bids": slim(book.get("bids") or [], lambda o: -float(o.get("price", 0))),
+        "asks": slim(book.get("asks") or [], lambda o: float(o.get("price", 0))),
+    }
 
 # ────────────────────────────────────────────────────────────────────────
 # EXECUTION (paper)
@@ -433,6 +511,11 @@ def simulate_entry(market, direction, signal_data, token_id=None):
         "clv_price": None,
         "clv_value": None,
         "yes_token_id": token_id,
+        # Enriched context for post-hoc analysis
+        "entry_history_window": signal_data.get("window_prices"),   # last 24 bars used to compute z
+        "entry_orderbook_top5": _book_top_n(book, 5) if book else None,
+        "entry_market_volume_24h": to_float(market.get("volume24hr"), 0.0),
+        "entry_market_liquidity": to_float(market.get("liquidityNum"), 0.0),
     }
 
 def simulate_exit(position, market, reason, exit_price_mid):
@@ -691,9 +774,10 @@ def run_cycle(state):
 
     print(f"\n[{now_iso()}] Cycle #{cycle_no} done. Open positions: {len(state['positions'])}, closed: {closed_count}, opened: {entered_count}")
 
-    # Drop transient cache before save
+    # Drop transient cache before save (cache is in state["history_cache"], persisted separately)
     state.pop("_last_universe_data", None)
     save_state(state)
+    save_daily_snapshot(state)
     print_pnl_summary()
 
 # ────────────────────────────────────────────────────────────────────────

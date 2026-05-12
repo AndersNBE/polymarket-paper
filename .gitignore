@@ -3,6 +3,8 @@ __pycache__/
 markets.json
 resolved_markets.json
 paper_test_run.log
+paper_history_cache*.json
+paper_history_cache_v2.json
 extended_backtest.log
 extended_v2.log
 extended_v3.log

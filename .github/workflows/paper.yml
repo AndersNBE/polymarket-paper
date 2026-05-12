@@ -66,6 +66,10 @@ jobs:
               echo "Missing: $f"
             fi
           done
+          # Add daily snapshots archive
+          if [ -d snapshots ]; then
+            git add -f snapshots/ && echo "Added: snapshots/"
+          fi
           echo "=========================================="
           echo "git status after adds:"
           git status
