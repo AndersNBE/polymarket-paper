@@ -25,6 +25,7 @@ HERE = Path(__file__).parent
 STATE_FILE = HERE / "paper_state.json"
 TRADES_FILE = HERE / "paper_trades.jsonl"
 SIGNALS_FILE = HERE / "paper_signals.jsonl"
+CYCLES_FILE = HERE / "paper_cycles.jsonl"
 OUT = HERE / "dashboard.html"
 
 # Backtest expectations (from extended_v3 — honest)
@@ -57,6 +58,7 @@ def load_state():
 state = load_state()
 trades = load_jsonl(TRADES_FILE)
 signals = load_jsonl(SIGNALS_FILE)
+cycles = load_jsonl(CYCLES_FILE)
 
 now = datetime.datetime.now(datetime.timezone.utc)
 now_str = now.strftime("%Y-%m-%d %H:%M UTC")
@@ -177,35 +179,52 @@ def color_pnl(v):
 open_rows = ""
 for mid, pos in open_positions.items():
     held_h = (now_ts - pos.get("entry_ts", 0)) / 3600
+    spread_bp = pos.get("entry_spread", 0) * 100  # in cents
+    clv_text = f"{pos.get('clv_value', 0)*100:+.2f}¢" if pos.get("clv_value") is not None else "—"
     open_rows += f"""
         <tr>
-            <td>{escape(str(pos.get('question', ''))[:70])}</td>
+            <td>{escape(str(pos.get('question', ''))[:60])}</td>
             <td>{pos.get('entry_z', 0):+.2f}</td>
             <td>{'short' if pos.get('direction') == -1 else 'long'}</td>
             <td>${pos.get('entry_exec_price', 0):.3f}</td>
+            <td>{spread_bp:.1f}¢</td>
+            <td>{pos.get('shares', 0):.1f}</td>
+            <td>${pos.get('shares', 0) * pos.get('entry_exec_price', 0) if pos.get('direction')==1 else pos.get('shares', 0) * (1-pos.get('entry_exec_price', 0)):.1f}</td>
             <td>{held_h:.1f}h</td>
+            <td>{pos.get('dte', 0):.0f}d</td>
+            <td>{clv_text}</td>
             <td>{(pos.get('fee_type') or '—').replace('_fees', '').replace('_v2', '')}</td>
         </tr>"""
 if not open_rows:
-    open_rows = '<tr><td colspan="6" style="text-align:center;color:#999;padding:24px">No open positions yet</td></tr>'
+    open_rows = '<tr><td colspan="11" style="text-align:center;color:#999;padding:24px">No open positions yet</td></tr>'
 
 # Recent closed trades
 recent_rows = ""
 for t in sorted(closed, key=lambda x: x.get("exit_ts", 0), reverse=True)[:30]:
     pnl = t.get("net_pnl_usd", 0)
     exit_dt = datetime.datetime.fromtimestamp(t.get("exit_ts", 0), datetime.timezone.utc).strftime("%m-%d %H:%M")
+    entry_dt = datetime.datetime.fromtimestamp(t.get("entry_ts", 0), datetime.timezone.utc).strftime("%m-%d %H:%M")
+    spread = t.get("entry_spread", 0) * 100
+    stake = (t.get("shares", 0) * t.get("entry_exec_price", 0)) if t.get("direction") == 1 else (t.get("shares", 0) * (1 - t.get("entry_exec_price", 0)))
+    clv_text = f"{t.get('clv_value', 0)*100:+.2f}¢" if t.get("clv_value") is not None else "—"
+    fees = t.get("total_fees_usd", 0)
     recent_rows += f"""
         <tr>
             <td>{exit_dt}</td>
-            <td>{escape(str(t.get('question', ''))[:55])}</td>
-            <td>{t.get('entry_z', 0):+.1f}</td>
+            <td>{escape(str(t.get('question', ''))[:45])}</td>
+            <td>{t.get('entry_z', 0):+.1f}σ</td>
             <td>{'S' if t.get('direction') == -1 else 'L'}</td>
+            <td>{t.get('entry_exec_price', 0):.3f}→{t.get('exit_exec_price', 0):.3f}</td>
+            <td>{spread:.1f}¢</td>
+            <td>${stake:.0f}</td>
             <td>{t.get('hold_hours', 0):.1f}h</td>
-            <td>{t.get('exit_reason', '—')[:10]}</td>
-            <td style="color:{color_pnl(pnl)}">${pnl:+.2f}</td>
+            <td>{t.get('exit_reason', '—')[:8]}</td>
+            <td>{clv_text}</td>
+            <td>${fees:.2f}</td>
+            <td style="color:{color_pnl(pnl)};font-weight:600">${pnl:+.2f}</td>
         </tr>"""
 if not recent_rows:
-    recent_rows = '<tr><td colspan="7" style="text-align:center;color:#999;padding:24px">No closed trades yet — strategy needs z≥5 spikes to revert</td></tr>'
+    recent_rows = '<tr><td colspan="12" style="text-align:center;color:#999;padding:24px">No closed trades yet — strategy needs z≥5 spikes to revert (hold up to 48h)</td></tr>'
 
 # Best / worst trade
 best = max(closed, key=lambda x: x.get("net_pnl_usd", 0)) if closed else None
@@ -217,6 +236,37 @@ worst_html = f"<div><strong>Worst:</strong> ${worst.get('net_pnl_usd', 0):+.2f} 
 # Signals seen but not yet closed
 n_signals_total = len(signals)
 n_signals_filtered = n_closed + n_open  # rough
+
+# Cycle activity (heartbeat / health)
+recent_cycles = sorted(cycles, key=lambda c: c.get("ts", 0), reverse=True)[:30]
+cycle_rows = ""
+for c in recent_cycles:
+    ts = c.get("ts", 0)
+    dt_str = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc).strftime("%m-%d %H:%M")
+    rej = c.get("rejected", {}) or {}
+    main_rej = "  ".join([f"{k}={v}" for k, v in rej.items() if v > 0][:3])  # top 3 rejection reasons
+    cycle_rows += f"""
+        <tr>
+            <td>{dt_str}</td>
+            <td>#{c.get('cycle', 0)}</td>
+            <td>{c.get('universe_size', 0):,}</td>
+            <td>{c.get('scanned', 0):,}</td>
+            <td>{c.get('signals_at_z5', 0)}</td>
+            <td>{c.get('opened', 0)}</td>
+            <td>{c.get('closed', 0)}</td>
+            <td>{c.get('open_positions_after', 0)}</td>
+            <td style="font-size:10px;color:#666">{main_rej}</td>
+        </tr>"""
+if not cycle_rows:
+    cycle_rows = '<tr><td colspan="9" style="text-align:center;color:#999;padding:24px">No cycle data yet</td></tr>'
+
+# Lifetime totals
+total_markets_scanned = sum(c.get("scanned", 0) for c in cycles)
+total_signals_seen = sum(c.get("signals_at_z5", 0) for c in cycles)
+last_cycle_ts = max((c.get("ts", 0) for c in cycles), default=0)
+mins_since_last = (now_ts - last_cycle_ts) / 60 if last_cycle_ts else None
+liveness = "🟢 Active" if mins_since_last is not None and mins_since_last < 30 else "🟡 Stale" if mins_since_last is not None and mins_since_last < 120 else "🔴 Dead"
+liveness_text = f"{liveness}  (last cycle {mins_since_last:.0f} min ago)" if mins_since_last is not None else "Waiting for first cycle"
 
 # ── HTML ─────────────────────────────────────────────────────────
 html = f"""<!DOCTYPE html>
@@ -260,7 +310,7 @@ html = f"""<!DOCTYPE html>
 <body>
 
 <h1>📊 Polymarket Paper Trader</h1>
-<div class="subtitle">Updated {now_str} · Cycle #{cycles_run} · Started {started_at[:10] if started_at != '—' else '—'} · Auto-refresh 60s</div>
+<div class="subtitle">Updated {now_str} · Cycle #{cycles_run} · Started {started_at[:10] if started_at != '—' else '—'} · Auto-refresh 60s · {liveness_text}</div>
 
 <div class="grid4">
   <div class="card">
@@ -379,10 +429,36 @@ html = f"""<!DOCTYPE html>
 </div>
 
 <div class="card-wide">
+  <h2>🫀 Bot health — recent cycles (last {len(recent_cycles)})</h2>
+  <p style="color:#656d76;font-size:12px;margin:0 0 8px">Each cycle scans ~3000 markets. Most are filtered out. The bot is healthy if cycles keep appearing here.</p>
+  <table>
+    <thead>
+      <tr><th>Time</th><th>#</th><th>Universe</th><th>Scanned</th><th>z≥5 signals</th><th>Opened</th><th>Closed</th><th>Now open</th><th>Top filter rejections</th></tr>
+    </thead>
+    <tbody>{cycle_rows}</tbody>
+  </table>
+  <div class="legend-row" style="margin-top:8px">
+    <div>Lifetime: <strong>{total_markets_scanned:,}</strong> markets scanned · <strong>{total_signals_seen}</strong> z≥5 signals seen · <strong>{n_open}</strong> currently open</div>
+  </div>
+</div>
+
+<div class="card-wide">
   <h2>🎮 Open positions ({n_open})</h2>
   <table>
     <thead>
-      <tr><th>Market</th><th>Entry z</th><th>Dir</th><th>Exec px</th><th>Held</th><th>Category</th></tr>
+      <tr>
+        <th>Market</th>
+        <th>z</th>
+        <th>Dir</th>
+        <th>Exec px</th>
+        <th>Spread</th>
+        <th>Shares</th>
+        <th>Stake</th>
+        <th>Held</th>
+        <th>DTE</th>
+        <th>CLV</th>
+        <th>Category</th>
+      </tr>
     </thead>
     <tbody>{open_rows}</tbody>
   </table>
@@ -394,7 +470,20 @@ html = f"""<!DOCTYPE html>
   {worst_html}
   <table style="margin-top:8px">
     <thead>
-      <tr><th>Exit time</th><th>Market</th><th>z</th><th>Dir</th><th>Held</th><th>Exit</th><th>PnL</th></tr>
+      <tr>
+        <th>Exit time</th>
+        <th>Market</th>
+        <th>z</th>
+        <th>Dir</th>
+        <th>Px entry→exit</th>
+        <th>Spread</th>
+        <th>Stake</th>
+        <th>Held</th>
+        <th>Exit why</th>
+        <th>CLV</th>
+        <th>Fees</th>
+        <th>Net PnL</th>
+      </tr>
     </thead>
     <tbody>{recent_rows}</tbody>
   </table>

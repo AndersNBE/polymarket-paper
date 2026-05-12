@@ -50,7 +50,7 @@ jobs:
         run: |
           git config user.name "paper-trader-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add -f paper_state.json paper_trades.jsonl paper_signals.jsonl dashboard.html 2>/dev/null || true
+          git add -f paper_state.json paper_trades.jsonl paper_signals.jsonl paper_cycles.jsonl dashboard.html 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No state changes this cycle"
           else

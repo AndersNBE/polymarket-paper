@@ -39,7 +39,7 @@
 <body>
 
 <h1>📊 Polymarket Paper Trader</h1>
-<div class="subtitle">Updated 2026-05-12 17:25 UTC · Cycle #0 · Started — · Auto-refresh 60s</div>
+<div class="subtitle">Updated 2026-05-12 17:43 UTC · Cycle #0 · Started — · Auto-refresh 60s · Waiting for first cycle</div>
 
 <div class="grid4">
   <div class="card">
@@ -158,12 +158,38 @@
 </div>
 
 <div class="card-wide">
+  <h2>🫀 Bot health — recent cycles (last 0)</h2>
+  <p style="color:#656d76;font-size:12px;margin:0 0 8px">Each cycle scans ~3000 markets. Most are filtered out. The bot is healthy if cycles keep appearing here.</p>
+  <table>
+    <thead>
+      <tr><th>Time</th><th>#</th><th>Universe</th><th>Scanned</th><th>z≥5 signals</th><th>Opened</th><th>Closed</th><th>Now open</th><th>Top filter rejections</th></tr>
+    </thead>
+    <tbody><tr><td colspan="9" style="text-align:center;color:#999;padding:24px">No cycle data yet</td></tr></tbody>
+  </table>
+  <div class="legend-row" style="margin-top:8px">
+    <div>Lifetime: <strong>0</strong> markets scanned · <strong>0</strong> z≥5 signals seen · <strong>0</strong> currently open</div>
+  </div>
+</div>
+
+<div class="card-wide">
   <h2>🎮 Open positions (0)</h2>
   <table>
     <thead>
-      <tr><th>Market</th><th>Entry z</th><th>Dir</th><th>Exec px</th><th>Held</th><th>Category</th></tr>
+      <tr>
+        <th>Market</th>
+        <th>z</th>
+        <th>Dir</th>
+        <th>Exec px</th>
+        <th>Spread</th>
+        <th>Shares</th>
+        <th>Stake</th>
+        <th>Held</th>
+        <th>DTE</th>
+        <th>CLV</th>
+        <th>Category</th>
+      </tr>
     </thead>
-    <tbody><tr><td colspan="6" style="text-align:center;color:#999;padding:24px">No open positions yet</td></tr></tbody>
+    <tbody><tr><td colspan="11" style="text-align:center;color:#999;padding:24px">No open positions yet</td></tr></tbody>
   </table>
 </div>
 
@@ -173,9 +199,22 @@
   
   <table style="margin-top:8px">
     <thead>
-      <tr><th>Exit time</th><th>Market</th><th>z</th><th>Dir</th><th>Held</th><th>Exit</th><th>PnL</th></tr>
+      <tr>
+        <th>Exit time</th>
+        <th>Market</th>
+        <th>z</th>
+        <th>Dir</th>
+        <th>Px entry→exit</th>
+        <th>Spread</th>
+        <th>Stake</th>
+        <th>Held</th>
+        <th>Exit why</th>
+        <th>CLV</th>
+        <th>Fees</th>
+        <th>Net PnL</th>
+      </tr>
     </thead>
-    <tbody><tr><td colspan="7" style="text-align:center;color:#999;padding:24px">No closed trades yet — strategy needs z≥5 spikes to revert</td></tr></tbody>
+    <tbody><tr><td colspan="12" style="text-align:center;color:#999;padding:24px">No closed trades yet — strategy needs z≥5 spikes to revert (hold up to 48h)</td></tr></tbody>
   </table>
 </div>
 

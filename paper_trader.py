@@ -56,6 +56,7 @@ _suffix = "" if VERSION == "v1" else "_" + VERSION
 STATE = HERE / f"paper_state{_suffix}.json"
 TRADE_LOG = HERE / f"paper_trades{_suffix}.jsonl"
 SIGNAL_LOG = HERE / f"paper_signals{_suffix}.jsonl"
+CYCLE_LOG = HERE / f"paper_cycles{_suffix}.jsonl"
 DAILY_LOG = HERE / f"paper_daily{_suffix}.csv"
 
 GAMMA = "https://gamma-api.polymarket.com"
@@ -569,12 +570,15 @@ def run_cycle(state):
 
     # ─── Step 2: Detect new entries ───
     entered_count = 0
+    rejected = {"no_token": 0, "no_history": 0, "no_signal": 0, "z_too_low": 0,
+                "price_boundary": 0, "dte_filter": 0, "direction_filter": 0,
+                "entry_failed_book": 0, "max_positions": 0}
+    scanned = 0
+    signals_seen = 0
     if len(state["positions"]) >= CFG["max_open_positions"]:
         print("Max positions reached, not opening new")
+        rejected["max_positions"] = len(uni)
     else:
-        # Iterate markets, look for signals
-        scanned = 0
-        signals_seen = 0
         total = len(uni)
         for mid, market in uni.items():
             if mid in state["positions"]:
@@ -587,36 +591,39 @@ def run_cycle(state):
                 print(f"  ... scan progress {scanned}/{total}  signals_so_far={signals_seen}  opens_so_far={entered_count}")
             tok = get_yes_token(market)
             if not tok:
+                rejected["no_token"] += 1
                 continue
             hist = get_history_cached(state, mid, tok)
             if not hist or len(hist) < CFG["rolling_window"] + 1:
+                rejected["no_history"] += 1
                 continue
             prices = np.array([h["p"] for h in hist], dtype=float)
             sig = compute_signal(prices, CFG["rolling_window"])
             if sig is None:
+                rejected["no_signal"] += 1
                 continue
             if abs(sig["z"]) < CFG["entry_z"]:
+                rejected["z_too_low"] += 1
                 continue
             signals_seen += 1
             # Apply filters
             if not (CFG["price_min"] <= sig["current"] <= CFG["price_max"]):
+                rejected["price_boundary"] += 1
                 continue
             dte = days_to_end_ts(market.get("endDate"), now_ts())
-            if dte is None or dte > CFG["dte_max"]:
+            if dte is None or dte > CFG["dte_max"] or CFG["dte_block_lo"] <= dte < CFG["dte_block_hi"] or dte < 0:
+                rejected["dte_filter"] += 1
                 continue
-            if CFG["dte_block_lo"] <= dte < CFG["dte_block_hi"]:
-                continue
-            if dte < 0:
-                continue
-            # Direction: mean-revert (short if z>0, long if z<0)
             direction = -1 if sig["z"] > 0 else 1
-            # Apply direction filter (v2 strategy = short only)
             if CFG.get("direction_filter") == "short" and direction != -1:
+                rejected["direction_filter"] += 1
                 continue
             if CFG.get("direction_filter") == "long" and direction != 1:
+                rejected["direction_filter"] += 1
                 continue
             pos = simulate_entry(market, direction, sig, token_id=tok)
             if pos is None:
+                rejected["entry_failed_book"] += 1
                 continue
             pos["dte"] = dte
             state["positions"][mid] = pos
@@ -629,14 +636,33 @@ def run_cycle(state):
                 "current_price": sig["current"],
                 "direction": direction,
                 "dte_days": dte,
+                "entry_exec_price": pos.get("entry_exec_price"),
+                "entry_spread": pos.get("entry_spread"),
+                "shares": pos.get("shares"),
+                "stake_usd": CFG["trade_size_usd"],
                 "action": "OPENED",
             })
             print(f"  ✓ OPEN  {pos['question'][:60]}  z={sig['z']:+.2f}  px={sig['current']:.3f}  dir={direction:+d}")
             if len(state["positions"]) >= CFG["max_open_positions"]:
                 break
 
-        # Also log mid-scan progress for long cycles
         print(f"Scanned: {scanned}, signals seen: {signals_seen}, entered: {entered_count}")
+        print(f"Filter rejections: {rejected}")
+
+    # Persist cycle activity for the dashboard
+    append_jsonl(CYCLE_LOG, {
+        "ts": now_ts(),
+        "cycle": cycle_no,
+        "universe_size": len(uni),
+        "history_cache_size": len(state.get("history_cache", {})),
+        "open_positions_before": len(state["positions"]) - entered_count + closed_count,
+        "open_positions_after": len(state["positions"]),
+        "scanned": scanned,
+        "signals_at_z5": signals_seen,
+        "rejected": rejected,
+        "opened": entered_count,
+        "closed": closed_count,
+    })
 
     print(f"\n[{now_iso()}] Cycle #{cycle_no} done. Open positions: {len(state['positions'])}, closed: {closed_count}, opened: {entered_count}")
 
