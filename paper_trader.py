@@ -30,6 +30,7 @@ import sys
 import time
 import traceback
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -107,6 +108,8 @@ CFG = {
     "max_spread_for_entry": 0.05,   # don't enter if spread > 5¢
     # rate limiting
     "api_delay_sec": 0.04,
+    # parallel HTTP workers for fetching per-market price history
+    "fetch_workers": 8,
     # price-history cache: hourly bars only update once an hour, so cache aggressively
     "history_cache_sec": 50 * 60,
     # scan limit per cycle (0 = no limit)
@@ -322,6 +325,25 @@ def prune_history_cache(state, keep_ids):
     keep = set(str(x) for x in keep_ids)
     state["history_cache"] = {k: v for k, v in cache.items() if k in keep}
 
+def prefetch_histories_parallel(state, items):
+    """Warm the price-history cache for a batch of (market_id, token_id) pairs
+       using a thread pool. Skips entries that are already cached and fresh.
+       Dict writes in get_history_cached are atomic under the GIL, so the cache
+       is safe to share across workers."""
+    cache = state.setdefault("history_cache", {})
+    cutoff = now_ts() - CFG["history_cache_sec"]
+    todo = [(mid, tok) for mid, tok in items
+            if tok and (mid not in cache or cache[mid].get("ts", 0) < cutoff)]
+    if not todo:
+        return 0
+    workers = max(1, int(CFG.get("fetch_workers", 8)))
+    def _one(pair):
+        mid, tok = pair
+        get_history_cached(state, mid, tok)
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_one, todo))
+    return len(todo)
+
 def get_yes_token(market):
     tids = market.get("clobTokenIds")
     try:
@@ -484,20 +506,14 @@ def run_cycle(state):
     print(f"\n========== CYCLE #{cycle_no} [{VERSION.upper()}] @ {now_iso()} ==========")
     print(f"   strategy: entry_z>={CFG['entry_z']}, max_hold={CFG['max_hold_hours']}h, dir={CFG.get('direction_filter') or 'both'}")
 
-    # Refresh universe if stale
-    if now_ts() - state["universe_ts"] > CFG["universe_refresh_sec"]:
-        uni = fetch_universe()
-        if uni:
-            state["universe"] = list(uni.keys())
-            state["universe_ts"] = now_ts()
-            state["_last_universe_data"] = uni  # cache for this cycle
-    else:
-        # Need fresh market data — refetch all universe markets in batches
-        # Easiest: re-fetch full markets endpoint and filter to our universe
-        print(f"[{now_iso()}] Re-fetching market quotes...")
-        uni = fetch_universe()  # same filters, gets fresh bestBid/bestAsk
-        if uni:
-            state["_last_universe_data"] = uni
+    # Always re-fetch universe to get fresh bestBid/bestAsk quotes.
+    # universe_refresh_sec used to gate this, but quotes go stale every cycle,
+    # so we need a fresh pull either way — the gating was a no-op.
+    uni = fetch_universe()
+    if uni:
+        state["universe"] = list(uni.keys())
+        state["universe_ts"] = now_ts()
+        state["_last_universe_data"] = uni
     uni = state.get("_last_universe_data", {})
     if not uni:
         print("No universe loaded, skipping cycle")
@@ -506,6 +522,15 @@ def run_cycle(state):
     prune_history_cache(state, uni.keys())
     print(f"Tracking universe: {len(uni)} markets   (history cache size: {len(state.get('history_cache', {}))})")
     print(f"Open positions: {len(state['positions'])}")
+
+    # Prefetch price histories in parallel — biggest single win.
+    # Histories cache for ~50min, so most cycles only fetch the diff.
+    t0 = time.time()
+    items = [(mid, get_yes_token(m)) for mid, m in uni.items()]
+    fetched = prefetch_histories_parallel(state, items)
+    if fetched:
+        print(f"[{now_iso()}] Prefetched {fetched} histories in {time.time()-t0:.1f}s "
+              f"(workers={CFG.get('fetch_workers', 8)})")
 
     # ─── Step 1: Check exits for open positions ───
     closed_count = 0
