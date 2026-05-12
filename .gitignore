@@ -4,7 +4,11 @@ markets.json
 resolved_markets.json
 paper_test_run.log
 extended_backtest.log
+extended_v2.log
+extended_v3.log
 extended_progress.json
+extended_progress_v2.json
+extended_progress_v3.json
 results_*.json
 spread_sample.json
 blindspot_results.json
