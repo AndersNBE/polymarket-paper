@@ -1,25 +1,16 @@
 #!/usr/bin/env python3
 """
-generate_dashboard.py — Build dashboard.html for paper trader.
+generate_dashboard.py — Pro trading dashboard for paper trader.
 
-Sections:
-  - Header KPIs (PnL, win rate, avg trade, positions)
-  - Equity curve with backtest baseline overlay
-  - Drawdown chart
-  - Rolling win-rate over last 20 trades
-  - PnL histogram with mean/median markers
-  - Z-score distribution at entry
-  - Hold-time distribution
-  - Per-category (feeType) breakdown
-  - Open positions table
-  - Recent closed trades
-  - Live vs backtest comparison
-  - Forecast cone (bootstrap projection of expected PnL)
+Dark mode, monospace numbers, live indicators, narrative-driven layout.
+Regenerated on every workflow cycle; served via GitHub Pages.
 """
 import json
 import datetime
+import random
 from pathlib import Path
 from html import escape
+from collections import defaultdict
 
 HERE = Path(__file__).parent
 STATE_FILE = HERE / "paper_state.json"
@@ -28,11 +19,14 @@ SIGNALS_FILE = HERE / "paper_signals.jsonl"
 CYCLES_FILE = HERE / "paper_cycles.jsonl"
 OUT = HERE / "dashboard.html"
 
-# Backtest expectations (from extended_v3 — honest)
+# Backtest expectations (from extended_v3)
 EXP_AVG_TRADE = 7.66
 EXP_WIN_RATE = 54.3
 EXP_STD = 70.79
-EXP_TRADES_PER_DAY = 3.0   # middle scenario from monte_carlo_v3
+EXP_CLV = 2.42       # cents per share, our gold metric
+EXP_TRADES_PER_DAY = 3.0
+BANKROLL_USD = 720
+STAKE = 30
 
 def load_jsonl(path):
     out = []
@@ -61,10 +55,10 @@ signals = load_jsonl(SIGNALS_FILE)
 cycles = load_jsonl(CYCLES_FILE)
 
 now = datetime.datetime.now(datetime.timezone.utc)
-now_str = now.strftime("%Y-%m-%d %H:%M UTC")
+now_str = now.strftime("%Y-%m-%d %H:%M:%S UTC")
 now_ts = now.timestamp()
 
-# ── Core stats ───────────────────────────────────────────────────
+# ── Stats ────────────────────────────────────────────────────────
 closed = sorted(trades, key=lambda t: t.get("exit_ts", 0))
 n_closed = len(closed)
 open_positions = state.get("positions", {})
@@ -79,14 +73,13 @@ wins = sum(1 for p in pnls if p > 0)
 win_rate = (wins / n_closed * 100) if n_closed else 0
 avg_trade = (total_pnl / n_closed) if n_closed else 0
 
-# CLV stats
 clv_values = [t.get("clv_value") for t in closed if t.get("clv_value") is not None]
 n_with_clv = len(clv_values)
 avg_clv = (sum(clv_values) / n_with_clv) if n_with_clv else 0
 clv_positive = sum(1 for c in clv_values if c > 0)
 clv_winrate = (clv_positive / n_with_clv * 100) if n_with_clv else 0
 
-# ── Equity curve + drawdown ──────────────────────────────────────
+# Equity + drawdown
 equity_x = []
 equity_y = []
 running = 0
@@ -95,40 +88,31 @@ drawdown_y = []
 for t in closed:
     running += t.get("net_pnl_usd", 0)
     ts = t.get("exit_ts", 0)
-    equity_x.append(datetime.datetime.fromtimestamp(ts, datetime.timezone.utc).strftime("%Y-%m-%d %H:%M"))
+    equity_x.append(datetime.datetime.fromtimestamp(ts, datetime.timezone.utc).strftime("%m-%d %H:%M"))
     equity_y.append(round(running, 2))
     peak = max(peak, running)
     drawdown_y.append(round(running - peak, 2))
-
 max_dd = min(drawdown_y, default=0)
 
-# ── Baseline: expected trajectory ────────────────────────────────
-# If we'd hit backtest expectation, where would equity be?
-baseline_y = [round(EXP_AVG_TRADE * (i + 1), 2) for i in range(len(equity_y))]
+baseline_y = [round(EXP_AVG_TRADE * (i + 1) * (STAKE / 100), 2) for i in range(len(equity_y))]
 
-# ── Forecast cone (bootstrap from backtest distribution) ─────────
-# Generate p5/p50/p95 projections for next 100 trades from current point
-import random
+# Forecast cone
 random.seed(42)
-# Use a normal-like distribution centered at expected
 N_FORECAST = 100
 N_SIM = 1000
 projections_p5 = []
 projections_p50 = []
 projections_p95 = []
 last_eq = equity_y[-1] if equity_y else 0
+exp_per_trade_at_stake = EXP_AVG_TRADE * (STAKE / 100)
+exp_std_at_stake = EXP_STD * (STAKE / 100)
 for k in range(1, N_FORECAST + 1):
-    sims = []
-    for _ in range(N_SIM):
-        s = sum(random.gauss(EXP_AVG_TRADE, EXP_STD) for _ in range(k))
-        sims.append(last_eq + s)
-    sims.sort()
+    sims = sorted(last_eq + sum(random.gauss(exp_per_trade_at_stake, exp_std_at_stake) for _ in range(k)) for _ in range(N_SIM))
     projections_p5.append(round(sims[int(N_SIM * 0.05)], 2))
     projections_p50.append(round(sims[N_SIM // 2], 2))
     projections_p95.append(round(sims[int(N_SIM * 0.95)], 2))
-projection_x = list(range(n_closed + 1, n_closed + 1 + N_FORECAST))
 
-# ── Rolling win rate (window of 20) ──────────────────────────────
+# Rolling win rate
 WINDOW = 20
 rolling_winrate_x = []
 rolling_winrate_y = []
@@ -138,361 +122,530 @@ for i in range(WINDOW - 1, n_closed):
     rolling_winrate_x.append(i + 1)
     rolling_winrate_y.append(round(wr, 1))
 
-# ── Z-score distribution at entry ────────────────────────────────
-entry_zs = [abs(t.get("entry_z", 0)) for t in trades]
-
-# ── Hold-time distribution ───────────────────────────────────────
-hold_times = [t.get("hold_hours", 0) for t in trades]
-
-# ── Per-category breakdown ───────────────────────────────────────
-from collections import defaultdict
+# Per-category breakdown
 by_cat = defaultdict(list)
 for t in closed:
     by_cat[t.get("fee_type") or "unknown"].append(t.get("net_pnl_usd", 0))
 
-cat_rows = ""
-for cat in sorted(by_cat.keys(), key=lambda k: -len(by_cat[k])):
-    arr = by_cat[cat]
-    cat_pnl = sum(arr)
-    cat_wins = sum(1 for x in arr if x > 0)
-    cat_winrate = cat_wins / len(arr) * 100
-    cat_avg = sum(arr) / len(arr)
-    color = "green" if cat_pnl > 0 else "red" if cat_pnl < 0 else "grey"
-    cat_rows += f"""
-        <tr>
-            <td>{cat.replace('_fees', '').replace('_v2', '').replace('_prices', '')}</td>
-            <td>{len(arr)}</td>
-            <td>{cat_winrate:.0f}%</td>
-            <td>${cat_avg:+.2f}</td>
-            <td style="color:{'#2ea043' if cat_pnl > 0 else '#cf222e' if cat_pnl < 0 else '#666'}">${cat_pnl:+.2f}</td>
-        </tr>"""
-if not cat_rows:
-    cat_rows = '<tr><td colspan="5" style="text-align:center;color:#999">No data yet</td></tr>'
-
-# ── Tables ──────────────────────────────────────────────────────
-def color_pnl(v):
-    if v > 0: return "#2ea043"
-    if v < 0: return "#cf222e"
-    return "#666"
-
-# Open positions with mark-to-market estimate (using current bid/ask if available)
-open_rows = ""
-for mid, pos in open_positions.items():
-    held_h = (now_ts - pos.get("entry_ts", 0)) / 3600
-    spread_bp = pos.get("entry_spread", 0) * 100  # in cents
-    clv_text = f"{pos.get('clv_value', 0)*100:+.2f}¢" if pos.get("clv_value") is not None else "—"
-    open_rows += f"""
-        <tr>
-            <td>{escape(str(pos.get('question', ''))[:60])}</td>
-            <td>{pos.get('entry_z', 0):+.2f}</td>
-            <td>{'short' if pos.get('direction') == -1 else 'long'}</td>
-            <td>${pos.get('entry_exec_price', 0):.3f}</td>
-            <td>{spread_bp:.1f}¢</td>
-            <td>{pos.get('shares', 0):.1f}</td>
-            <td>${pos.get('shares', 0) * pos.get('entry_exec_price', 0) if pos.get('direction')==1 else pos.get('shares', 0) * (1-pos.get('entry_exec_price', 0)):.1f}</td>
-            <td>{held_h:.1f}h</td>
-            <td>{pos.get('dte', 0):.0f}d</td>
-            <td>{clv_text}</td>
-            <td>{(pos.get('fee_type') or '—').replace('_fees', '').replace('_v2', '')}</td>
-        </tr>"""
-if not open_rows:
-    open_rows = '<tr><td colspan="11" style="text-align:center;color:#999;padding:24px">No open positions yet</td></tr>'
-
-# Recent closed trades
-recent_rows = ""
-for t in sorted(closed, key=lambda x: x.get("exit_ts", 0), reverse=True)[:30]:
-    pnl = t.get("net_pnl_usd", 0)
-    exit_dt = datetime.datetime.fromtimestamp(t.get("exit_ts", 0), datetime.timezone.utc).strftime("%m-%d %H:%M")
-    entry_dt = datetime.datetime.fromtimestamp(t.get("entry_ts", 0), datetime.timezone.utc).strftime("%m-%d %H:%M")
-    spread = t.get("entry_spread", 0) * 100
-    stake = (t.get("shares", 0) * t.get("entry_exec_price", 0)) if t.get("direction") == 1 else (t.get("shares", 0) * (1 - t.get("entry_exec_price", 0)))
-    clv_text = f"{t.get('clv_value', 0)*100:+.2f}¢" if t.get("clv_value") is not None else "—"
-    fees = t.get("total_fees_usd", 0)
-    recent_rows += f"""
-        <tr>
-            <td>{exit_dt}</td>
-            <td>{escape(str(t.get('question', ''))[:45])}</td>
-            <td>{t.get('entry_z', 0):+.1f}σ</td>
-            <td>{'S' if t.get('direction') == -1 else 'L'}</td>
-            <td>{t.get('entry_exec_price', 0):.3f}→{t.get('exit_exec_price', 0):.3f}</td>
-            <td>{spread:.1f}¢</td>
-            <td>${stake:.0f}</td>
-            <td>{t.get('hold_hours', 0):.1f}h</td>
-            <td>{t.get('exit_reason', '—')[:8]}</td>
-            <td>{clv_text}</td>
-            <td>${fees:.2f}</td>
-            <td style="color:{color_pnl(pnl)};font-weight:600">${pnl:+.2f}</td>
-        </tr>"""
-if not recent_rows:
-    recent_rows = '<tr><td colspan="12" style="text-align:center;color:#999;padding:24px">No closed trades yet — strategy needs z≥5 spikes to revert (hold up to 48h)</td></tr>'
-
-# Best / worst trade
-best = max(closed, key=lambda x: x.get("net_pnl_usd", 0)) if closed else None
-worst = min(closed, key=lambda x: x.get("net_pnl_usd", 0)) if closed else None
-
-best_html = f"<div><strong>Best:</strong> ${best.get('net_pnl_usd', 0):+.2f} · {escape(str(best.get('question', ''))[:50])} · z={best.get('entry_z', 0):+.1f}</div>" if best else ""
-worst_html = f"<div><strong>Worst:</strong> ${worst.get('net_pnl_usd', 0):+.2f} · {escape(str(worst.get('question', ''))[:50])} · z={worst.get('entry_z', 0):+.1f}</div>" if worst else ""
-
-# Signals seen but not yet closed
-n_signals_total = len(signals)
-n_signals_filtered = n_closed + n_open  # rough
-
-# Cycle activity (heartbeat / health)
-recent_cycles = sorted(cycles, key=lambda c: c.get("ts", 0), reverse=True)[:30]
-cycle_rows = ""
-for c in recent_cycles:
-    ts = c.get("ts", 0)
-    dt_str = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc).strftime("%m-%d %H:%M")
-    rej = c.get("rejected", {}) or {}
-    main_rej = "  ".join([f"{k}={v}" for k, v in rej.items() if v > 0][:3])  # top 3 rejection reasons
-    cycle_rows += f"""
-        <tr>
-            <td>{dt_str}</td>
-            <td>#{c.get('cycle', 0)}</td>
-            <td>{c.get('universe_size', 0):,}</td>
-            <td>{c.get('scanned', 0):,}</td>
-            <td>{c.get('signals_at_z5', 0)}</td>
-            <td>{c.get('opened', 0)}</td>
-            <td>{c.get('closed', 0)}</td>
-            <td>{c.get('open_positions_after', 0)}</td>
-            <td style="font-size:10px;color:#666">{main_rej}</td>
-        </tr>"""
-if not cycle_rows:
-    cycle_rows = '<tr><td colspan="9" style="text-align:center;color:#999;padding:24px">No cycle data yet</td></tr>'
-
-# Lifetime totals
+# Cycle activity
+recent_cycles = sorted(cycles, key=lambda c: c.get("ts", 0), reverse=True)[:24]
 total_markets_scanned = sum(c.get("scanned", 0) for c in cycles)
 total_signals_seen = sum(c.get("signals_at_z5", 0) for c in cycles)
 last_cycle_ts = max((c.get("ts", 0) for c in cycles), default=0)
 mins_since_last = (now_ts - last_cycle_ts) / 60 if last_cycle_ts else None
-liveness = "🟢 Active" if mins_since_last is not None and mins_since_last < 30 else "🟡 Stale" if mins_since_last is not None and mins_since_last < 120 else "🔴 Dead"
-liveness_text = f"{liveness}  (last cycle {mins_since_last:.0f} min ago)" if mins_since_last is not None else "Waiting for first cycle"
+if mins_since_last is None:
+    liveness = "—"
+    liveness_color = "#7d8590"
+elif mins_since_last < 30:
+    liveness = "LIVE"
+    liveness_color = "#3fb950"
+elif mins_since_last < 120:
+    liveness = "STALE"
+    liveness_color = "#d29922"
+else:
+    liveness = "DEAD"
+    liveness_color = "#f85149"
+
+# Top filter rejection reasons (lifetime)
+lifetime_rejections = defaultdict(int)
+for c in cycles:
+    for k, v in (c.get("rejected") or {}).items():
+        lifetime_rejections[k] += v
+
+# Sparklines for hero (use recent equity if available)
+sparkline_data = equity_y[-30:] if equity_y else []
+
+# Decision verdict
+def get_verdict():
+    if n_closed < 5:
+        return ("INSUFFICIENT DATA", "#d29922", f"Need {5 - n_closed} more trades for first read")
+    if n_with_clv < 5:
+        return ("CLV PENDING", "#d29922", f"CLV measured on {n_with_clv} trades; need 10+ for confidence")
+    if avg_clv > 0.005 and avg_trade > 0:
+        return ("EDGE CONFIRMED", "#3fb950", "Both CLV and PnL positive — strategy working as expected")
+    if avg_clv > 0.005 and avg_trade <= 0:
+        return ("EDGE OK, VARIANCE", "#d29922", "CLV positive but PnL noisy — wait for more trades")
+    if avg_clv <= 0 and avg_trade > 0:
+        return ("LUCKY", "#d29922", "PnL positive but CLV not — may be variance, not edge")
+    return ("NO EDGE DETECTED", "#f85149", "Both CLV and PnL negative — strategy likely not working")
+
+verdict_label, verdict_color, verdict_sub = get_verdict()
+
+# ── Helpers ──────────────────────────────────────────────────────
+def fmt_pnl(v, prec=2):
+    sign = "+" if v >= 0 else ""
+    color = "#3fb950" if v > 0 else "#f85149" if v < 0 else "#7d8590"
+    return f'<span style="color:{color}">{sign}${v:.{prec}f}</span>'
+
+def color_for(v):
+    if v > 0: return "#3fb950"
+    if v < 0: return "#f85149"
+    return "#7d8590"
+
+# ── Build position cards (instead of table) ─────────────────────
+position_cards = ""
+for mid, pos in sorted(open_positions.items(), key=lambda kv: kv[1].get("entry_ts", 0), reverse=True):
+    held_h = (now_ts - pos.get("entry_ts", 0)) / 3600
+    entry_px = pos.get("entry_exec_price", 0)
+    stake = pos.get("shares", 0) * (entry_px if pos.get("direction") == 1 else (1 - entry_px))
+    dir_label = "SHORT" if pos.get("direction") == -1 else "LONG"
+    dir_color = "#f85149" if pos.get("direction") == -1 else "#3fb950"
+    clv = pos.get("clv_value")
+    clv_html = f'<div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:{color_for(clv)}">{clv*100:+.2f}¢</span></div>' if clv is not None else '<div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#7d8590">pending</span></div>'
+    spread = pos.get("entry_spread", 0) * 100
+    category = (pos.get('fee_type') or 'other').replace('_fees', '').replace('_v2', '').replace('_prices', '')
+    position_cards += f"""
+    <div class="pos-card">
+        <div class="pos-card-top">
+            <div class="pos-question">{escape(str(pos.get('question', ''))[:80])}</div>
+            <div class="pos-dir" style="color:{dir_color}">{dir_label}</div>
+        </div>
+        <div class="pos-stats">
+            <div class="pos-stat"><span class="pos-stat-label">z-score</span><span class="pos-stat-val">{pos.get('entry_z', 0):+.2f}σ</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">${entry_px:.3f}</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">{spread:.1f}¢</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">${stake:.0f}</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">{held_h:.1f}h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">{pos.get('dte', 0):.0f}d</span></div>
+            {clv_html}
+            <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">{category}</span></div>
+        </div>
+    </div>"""
+if not position_cards:
+    position_cards = '<div class="empty-state">No open positions · waiting for z≥5 signals (typically 0-2 per cycle)</div>'
+
+# ── Build activity feed (combine cycles + trades) ───────────────
+activity_items = []
+for t in closed[-15:]:
+    pnl = t.get("net_pnl_usd", 0)
+    ts = t.get("exit_ts", 0)
+    activity_items.append({
+        "ts": ts,
+        "type": "close",
+        "label": f"Closed {'short' if t.get('direction')==-1 else 'long'} {escape(str(t.get('question',''))[:50])} → {fmt_pnl(pnl)} ({t.get('exit_reason','—')})",
+    })
+for s in signals[-15:]:
+    activity_items.append({
+        "ts": s.get("ts", 0),
+        "type": "open",
+        "label": f"Opened {'short' if s.get('direction')==-1 else 'long'} {escape(str(s.get('question',''))[:50])} at z={s.get('z',0):+.2f}",
+    })
+# Add recent cycles (only "interesting" ones)
+for c in recent_cycles[:10]:
+    if c.get("signals_at_z5", 0) > 0 or c.get("opened", 0) > 0 or c.get("closed", 0) > 0:
+        ts = c.get("ts", 0)
+        activity_items.append({
+            "ts": ts,
+            "type": "cycle",
+            "label": f"Scan #{c.get('cycle')}: {c.get('scanned'):,} markets, {c.get('signals_at_z5')} signals, {c.get('opened')} opened, {c.get('closed')} closed",
+        })
+
+activity_items.sort(key=lambda x: x["ts"], reverse=True)
+activity_items = activity_items[:25]
+
+activity_html = ""
+for it in activity_items:
+    dt_str = datetime.datetime.fromtimestamp(it["ts"], datetime.timezone.utc).strftime("%m-%d %H:%M")
+    icon = {"close": "✗", "open": "▲", "cycle": "↻"}[it["type"]]
+    color = {"close": "#a371f7", "open": "#58a6ff", "cycle": "#7d8590"}[it["type"]]
+    activity_html += f'<div class="activity-row"><span class="activity-time">{dt_str}</span><span class="activity-icon" style="color:{color}">{icon}</span><span class="activity-text">{it["label"]}</span></div>'
+if not activity_html:
+    activity_html = '<div class="empty-state-small">No activity yet · waiting for first cycle</div>'
+
+# Recent cycles table
+cycle_rows = ""
+for c in recent_cycles[:20]:
+    ts = c.get("ts", 0)
+    dt_str = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc).strftime("%m-%d %H:%M")
+    rej = c.get("rejected", {}) or {}
+    top_rej = sorted(rej.items(), key=lambda kv: -kv[1])[:2]
+    rej_html = " ".join(f'<span class="chip">{k.replace("_", " ")}: {v:,}</span>' for k, v in top_rej if v > 0)
+    cycle_rows += f"""
+        <tr>
+            <td class="mono">{dt_str}</td>
+            <td class="mono">#{c.get('cycle', 0)}</td>
+            <td class="mono num">{c.get('scanned', 0):,}</td>
+            <td class="mono num" style="color:{'#3fb950' if c.get('signals_at_z5', 0) > 0 else '#7d8590'}">{c.get('signals_at_z5', 0)}</td>
+            <td class="mono num" style="color:{'#58a6ff' if c.get('opened', 0) > 0 else '#7d8590'}">{c.get('opened', 0)}</td>
+            <td class="mono num" style="color:{'#a371f7' if c.get('closed', 0) > 0 else '#7d8590'}">{c.get('closed', 0)}</td>
+            <td>{rej_html}</td>
+        </tr>"""
+if not cycle_rows:
+    cycle_rows = '<tr><td colspan="7" class="empty-state-small">No cycles yet</td></tr>'
+
+# Recent trades table
+recent_trade_rows = ""
+for t in sorted(closed, key=lambda x: x.get("exit_ts", 0), reverse=True)[:30]:
+    pnl = t.get("net_pnl_usd", 0)
+    exit_dt = datetime.datetime.fromtimestamp(t.get("exit_ts", 0), datetime.timezone.utc).strftime("%m-%d %H:%M")
+    spread = t.get("entry_spread", 0) * 100
+    stake = (t.get("shares", 0) * t.get("entry_exec_price", 0)) if t.get("direction") == 1 else (t.get("shares", 0) * (1 - t.get("entry_exec_price", 0)))
+    clv_text = f"{t.get('clv_value', 0)*100:+.2f}¢" if t.get("clv_value") is not None else "—"
+    clv_color = color_for(t.get('clv_value', 0)) if t.get("clv_value") is not None else "#7d8590"
+    fees = t.get("total_fees_usd", 0)
+    dir_label = "S" if t.get('direction') == -1 else "L"
+    dir_color = "#f85149" if t.get('direction') == -1 else "#3fb950"
+    recent_trade_rows += f"""
+        <tr>
+            <td class="mono">{exit_dt}</td>
+            <td>{escape(str(t.get('question', ''))[:55])}</td>
+            <td class="mono num">{t.get('entry_z', 0):+.1f}σ</td>
+            <td class="mono center" style="color:{dir_color}">{dir_label}</td>
+            <td class="mono num">{t.get('entry_exec_price', 0):.3f}→{t.get('exit_exec_price', 0):.3f}</td>
+            <td class="mono num">{spread:.1f}¢</td>
+            <td class="mono num">${stake:.0f}</td>
+            <td class="mono num">{t.get('hold_hours', 0):.1f}h</td>
+            <td class="mono">{t.get('exit_reason', '—')[:8]}</td>
+            <td class="mono num" style="color:{clv_color}">{clv_text}</td>
+            <td class="mono num">${fees:.2f}</td>
+            <td class="mono num" style="color:{color_for(pnl)};font-weight:600">${pnl:+.2f}</td>
+        </tr>"""
+if not recent_trade_rows:
+    recent_trade_rows = '<tr><td colspan="12" class="empty-state-small">No closed trades yet · z≥5 spikes typically revert in 12-48h</td></tr>'
+
+cat_rows = ""
+for cat in sorted(by_cat.keys(), key=lambda k: -len(by_cat[k])):
+    arr = by_cat[cat]
+    if len(arr) < 1: continue
+    cat_pnl = sum(arr)
+    cat_wins = sum(1 for x in arr if x > 0)
+    cat_winrate = cat_wins / len(arr) * 100
+    cat_avg = sum(arr) / len(arr)
+    cat_name = cat.replace('_fees', '').replace('_v2', '').replace('_prices', '')
+    cat_rows += f"""
+        <tr>
+            <td>{cat_name}</td>
+            <td class="mono num">{len(arr)}</td>
+            <td class="mono num">{cat_winrate:.0f}%</td>
+            <td class="mono num">${cat_avg:+.2f}</td>
+            <td class="mono num" style="color:{color_for(cat_pnl)}">${cat_pnl:+.2f}</td>
+        </tr>"""
+if not cat_rows:
+    cat_rows = '<tr><td colspan="5" class="empty-state-small">No closed trades</td></tr>'
 
 # ── HTML ─────────────────────────────────────────────────────────
 html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Polymarket Paper Trader · Dashboard</title>
+<title>Polymarket Paper Trader</title>
 <meta http-equiv="refresh" content="60">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-          max-width: 1200px; margin: 0 auto; padding: 20px; background: #f6f8fa; color: #1f2328; }}
-  h1, h2 {{ color: #1f2328; margin: 0; }}
-  h1 {{ font-size: 22px; margin-bottom: 4px; }}
-  h2 {{ font-size: 16px; margin-bottom: 8px; }}
-  .subtitle {{ color: #656d76; font-size: 12px; margin-bottom: 20px; }}
-  .grid4 {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }}
-  .grid3 {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }}
-  .grid2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }}
-  .card {{ background: #fff; border: 1px solid #d0d7de; border-radius: 8px; padding: 14px; }}
-  .card h3 {{ margin: 0; font-size: 11px; color: #656d76; text-transform: uppercase; letter-spacing: 0.05em; }}
-  .card .val {{ font-size: 24px; font-weight: 600; margin-top: 6px; }}
-  .card .sub {{ font-size: 11px; color: #656d76; margin-top: 2px; }}
-  .green {{ color: #2ea043; }}
-  .red {{ color: #cf222e; }}
-  .grey {{ color: #656d76; }}
-  table {{ width: 100%; border-collapse: collapse; background: #fff; font-size: 12px; }}
-  th, td {{ text-align: left; padding: 6px 10px; border-bottom: 1px solid #d0d7de; }}
-  th {{ background: #f6f8fa; color: #656d76; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }}
+  :root {{
+    --bg: #0a0e14;
+    --surface: #11161d;
+    --surface-2: #161b22;
+    --border: #21262d;
+    --border-strong: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --text-mute: #6e7681;
+    --green: #3fb950;
+    --green-dim: rgba(63, 185, 80, 0.15);
+    --red: #f85149;
+    --red-dim: rgba(248, 81, 73, 0.15);
+    --amber: #d29922;
+    --blue: #58a6ff;
+    --blue-dim: rgba(88, 166, 255, 0.15);
+    --purple: #a371f7;
+  }}
+  * {{ box-sizing: border-box; }}
+  body {{
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.4;
+  }}
+  .mono {{ font-family: "SF Mono", "Menlo", "Monaco", "Roboto Mono", "JetBrains Mono", monospace; font-feature-settings: "tnum" 1; }}
+  .num {{ text-align: right; }}
+  .center {{ text-align: center; }}
+  .container {{ max-width: 1400px; margin: 0 auto; padding: 24px; }}
+
+  /* Header */
+  header {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }}
+  .logo {{ display: flex; align-items: center; gap: 12px; }}
+  .logo-mark {{ width: 36px; height: 36px; background: linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; }}
+  .logo-text h1 {{ margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }}
+  .logo-text .sub {{ font-size: 11px; color: var(--text-mute); margin-top: 1px; }}
+  .live-pill {{ display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; font-size: 12px; }}
+  .live-dot {{ width: 8px; height: 8px; border-radius: 50%; background: {liveness_color}; box-shadow: 0 0 0 0 {liveness_color}; animation: pulse 2s infinite; }}
+  @keyframes pulse {{
+    0% {{ box-shadow: 0 0 0 0 {liveness_color}66; }}
+    70% {{ box-shadow: 0 0 0 8px transparent; }}
+    100% {{ box-shadow: 0 0 0 0 transparent; }}
+  }}
+
+  /* Hero */
+  .hero {{ display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 1px; background: var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 24px; border: 1px solid var(--border); }}
+  .hero-cell {{ background: var(--surface); padding: 22px 24px; }}
+  .hero-label {{ font-size: 11px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; font-weight: 500; }}
+  .hero-value {{ font-size: 36px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }}
+  .hero-sub {{ font-size: 12px; color: var(--text-dim); margin-top: 6px; }}
+  .hero-cell-primary {{ background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%); }}
+
+  /* Verdict banner */
+  .verdict {{ display: flex; align-items: center; gap: 16px; padding: 18px 22px; background: var(--surface); border: 1px solid {verdict_color}33; border-left: 4px solid {verdict_color}; border-radius: 10px; margin-bottom: 24px; }}
+  .verdict-icon {{ width: 38px; height: 38px; border-radius: 10px; background: {verdict_color}1a; display: flex; align-items: center; justify-content: center; color: {verdict_color}; font-size: 20px; }}
+  .verdict-content {{ flex: 1; }}
+  .verdict-label {{ font-weight: 600; color: {verdict_color}; font-size: 15px; }}
+  .verdict-sub {{ font-size: 13px; color: var(--text-dim); margin-top: 2px; }}
+
+  /* Cards */
+  .card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }}
+  .card-title {{ font-size: 12px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; font-weight: 500; display: flex; align-items: center; justify-content: space-between; }}
+  .card-title-row {{ display: flex; align-items: center; gap: 8px; }}
+  .chip {{ display: inline-block; padding: 2px 8px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 999px; font-size: 10px; color: var(--text-dim); }}
+
+  /* Grid layouts */
+  .row-2-1 {{ display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px; }}
+  .row-1-1 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }}
+  .row-1-1-1 {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }}
+
+  /* Tables */
+  table {{ width: 100%; border-collapse: collapse; font-size: 12.5px; }}
+  th, td {{ text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }}
+  th {{ color: var(--text-mute); text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; font-weight: 500; background: transparent; }}
+  td {{ color: var(--text); }}
   tr:last-child td {{ border-bottom: none; }}
-  td:last-child, th:last-child {{ text-align: right; }}
-  .card-wide {{ background: #fff; border: 1px solid #d0d7de; border-radius: 8px; padding: 14px; margin-bottom: 12px; }}
-  canvas {{ max-height: 280px; }}
-  .empty-msg {{ color: #999; text-align: center; padding: 30px; font-size: 13px; }}
-  .chart-cell {{ position: relative; height: 220px; }}
-  .highlight {{ background: #fff8c5; padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-top: 8px; }}
-  .legend-row {{ display: flex; gap: 16px; font-size: 11px; color: #656d76; margin-top: 4px; }}
-  .legend-dot {{ display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }}
+  tr:hover td {{ background: var(--surface-2); }}
+  .empty-state {{ padding: 32px; text-align: center; color: var(--text-mute); font-size: 13px; background: var(--surface-2); border-radius: 10px; }}
+  .empty-state-small {{ padding: 20px; text-align: center; color: var(--text-mute); font-size: 12px; }}
+
+  /* Position cards */
+  .pos-card {{ background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }}
+  .pos-card-top {{ display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }}
+  .pos-question {{ font-size: 13px; color: var(--text); flex: 1; }}
+  .pos-dir {{ font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 4px; background: var(--surface); letter-spacing: 0.05em; }}
+  .pos-stats {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }}
+  .pos-stat {{ display: flex; flex-direction: column; }}
+  .pos-stat-label {{ font-size: 10px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.05em; }}
+  .pos-stat-val {{ font-size: 13px; font-weight: 500; font-family: "SF Mono", "Menlo", monospace; margin-top: 2px; }}
+
+  /* Activity feed */
+  .activity-row {{ display: grid; grid-template-columns: 80px 24px 1fr; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }}
+  .activity-row:last-child {{ border-bottom: none; }}
+  .activity-time {{ color: var(--text-mute); font-family: "SF Mono", "Menlo", monospace; font-size: 11px; }}
+  .activity-icon {{ text-align: center; font-weight: bold; }}
+  .activity-text {{ color: var(--text); }}
+
+  /* Stat detail bar */
+  .stat-bar {{ display: flex; gap: 18px; font-size: 12px; color: var(--text-dim); margin-top: 8px; }}
+  .stat-bar strong {{ color: var(--text); }}
+
+  /* Chart heights */
+  .chart-cell {{ position: relative; height: 240px; }}
+  .chart-cell-large {{ position: relative; height: 320px; }}
+  .chart-cell-small {{ position: relative; height: 180px; }}
+
+  /* Footer */
+  footer {{ margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-mute); display: flex; justify-content: space-between; }}
+
+  /* Sparkline */
+  .sparkline {{ height: 28px; margin-top: 8px; }}
+
+  @media (max-width: 900px) {{
+    .hero {{ grid-template-columns: 1fr 1fr; }}
+    .row-2-1, .row-1-1, .row-1-1-1 {{ grid-template-columns: 1fr; }}
+    .pos-stats {{ grid-template-columns: repeat(2, 1fr); }}
+  }}
 </style>
 </head>
 <body>
+<div class="container">
 
-<h1>📊 Polymarket Paper Trader</h1>
-<div class="subtitle">Updated {now_str} · Cycle #{cycles_run} · Started {started_at[:10] if started_at != '—' else '—'} · Auto-refresh 60s · {liveness_text}</div>
+  <header>
+    <div class="logo">
+      <div class="logo-mark">P</div>
+      <div class="logo-text">
+        <h1>Polymarket Paper Trader</h1>
+        <div class="sub">{now_str} · Cycle #{cycles_run} · Started {started_at[:10] if started_at != '—' else '—'}</div>
+      </div>
+    </div>
+    <div class="live-pill">
+      <span class="live-dot"></span>
+      <span style="color:{liveness_color};font-weight:600">{liveness}</span>
+      <span style="color:var(--text-mute)">·</span>
+      <span style="color:var(--text-dim)">{f'{mins_since_last:.0f}m ago' if mins_since_last is not None else 'no data'}</span>
+    </div>
+  </header>
 
-<div class="grid4">
-  <div class="card">
-    <h3>Net PnL</h3>
-    <div class="val {'green' if total_pnl > 0 else 'red' if total_pnl < 0 else 'grey'}">${total_pnl:+.2f}</div>
-    <div class="sub">{n_closed} closed · ${total_fees:.2f} fees paid</div>
+  <!-- VERDICT -->
+  <div class="verdict">
+    <div class="verdict-icon">{('✓' if 'CONFIRMED' in verdict_label else '⚠' if 'PENDING' in verdict_label or 'VARIANCE' in verdict_label or 'INSUFFICIENT' in verdict_label or 'LUCKY' in verdict_label else '✗')}</div>
+    <div class="verdict-content">
+      <div class="verdict-label">{verdict_label}</div>
+      <div class="verdict-sub">{verdict_sub}</div>
+    </div>
   </div>
-  <div class="card">
-    <h3>Win Rate</h3>
-    <div class="val">{win_rate:.1f}%</div>
-    <div class="sub">{wins}/{n_closed} · expected ~{EXP_WIN_RATE}%</div>
-  </div>
-  <div class="card">
-    <h3>Avg / Trade</h3>
-    <div class="val {'green' if avg_trade > 0 else 'red' if avg_trade < 0 else 'grey'}">${avg_trade:+.2f}</div>
-    <div class="sub">expected ~${EXP_AVG_TRADE:.2f}</div>
-  </div>
-  <div class="card">
-    <h3>Positions</h3>
-    <div class="val">{n_open} <span style="font-size:14px;color:#666">open</span></div>
-    <div class="sub">{n_closed} closed · {cycles_run} scans</div>
-  </div>
-</div>
 
-<div class="grid4">
-  <div class="card">
-    <h3>Max Drawdown</h3>
-    <div class="val {'red' if max_dd < 0 else 'grey'}">${max_dd:+.2f}</div>
-    <div class="sub">worst peak-to-trough</div>
+  <!-- HERO STRIP -->
+  <div class="hero">
+    <div class="hero-cell hero-cell-primary">
+      <div class="hero-label">Net PnL</div>
+      <div class="hero-value mono" style="color:{color_for(total_pnl)}">${total_pnl:+.2f}</div>
+      <div class="hero-sub">{n_closed} trades · ${total_fees:.2f} fees paid · ${'+' if total_pnl-total_fees > 0 else ''}${total_pnl + total_fees:.2f} before fees</div>
+    </div>
+    <div class="hero-cell">
+      <div class="hero-label">Avg CLV ★</div>
+      <div class="hero-value mono" style="color:{color_for(avg_clv)}">{avg_clv*100:+.2f}¢</div>
+      <div class="hero-sub">{n_with_clv} measured · {clv_winrate:.0f}% positive · target +{EXP_CLV:.1f}¢</div>
+    </div>
+    <div class="hero-cell">
+      <div class="hero-label">Win Rate</div>
+      <div class="hero-value mono">{win_rate:.1f}<span style="font-size:18px;color:var(--text-dim)">%</span></div>
+      <div class="hero-sub">{wins}/{n_closed} · expected ~{EXP_WIN_RATE}%</div>
+    </div>
+    <div class="hero-cell">
+      <div class="hero-label">Open Positions</div>
+      <div class="hero-value mono">{n_open}<span style="font-size:18px;color:var(--text-dim)">/10</span></div>
+      <div class="hero-sub">${sum((p.get('shares',0) * (p.get('entry_exec_price',0) if p.get('direction')==1 else (1-p.get('entry_exec_price',0)))) for p in open_positions.values()):.0f} deployed of ${BANKROLL_USD}</div>
+    </div>
   </div>
-  <div class="card">
-    <h3>Avg CLV (closing line value)</h3>
-    <div class="val {'green' if avg_clv > 0 else 'red' if avg_clv < 0 else 'grey'}">{avg_clv*100:+.2f}¢</div>
-    <div class="sub">{n_with_clv} measured · {clv_winrate:.0f}% positive · ★ best edge proxy</div>
-  </div>
-  <div class="card">
-    <h3>Total Signals Seen</h3>
-    <div class="val">{n_signals_total}</div>
-    <div class="sub">passed all filters</div>
-  </div>
-  <div class="card">
-    <h3>Strategy Status</h3>
-    <div class="val" style="font-size:14px;color:#0969da">{'✓ Matching backtest' if abs(avg_trade - EXP_AVG_TRADE) < 5 and n_closed > 10 else '⏳ Gathering data' if n_closed < 10 else '⚠ Deviation from backtest'}</div>
-    <div class="sub">{'expectation' if n_closed > 10 else 'need 10+ trades for assessment'}</div>
-  </div>
-</div>
 
-<div class="card-wide">
-  <h2>📈 Equity curve (live vs expected)</h2>
-  <div class="legend-row">
-    <div><span class="legend-dot" style="background:#0969da"></span>Live PnL</div>
-    <div><span class="legend-dot" style="background:#999"></span>Backtest expectation (avg $7.66/trade)</div>
-    <div><span class="legend-dot" style="background:#cf222e"></span>Break-even</div>
-  </div>
-  <div class="chart-cell"><canvas id="equity"></canvas></div>
-  {f'<div class="empty-msg">Waiting for first closed trade — strategy needs z≥5 spikes to revert (typically 0-2 per cycle)</div>' if not closed else ''}
-</div>
+  <!-- MAIN: EQUITY + ACTIVITY FEED -->
+  <div class="row-2-1">
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-row">📈 Equity curve <span class="chip">live vs backtest</span></div>
+        <span style="color:var(--text-mute);font-size:11px">${total_pnl:+.0f} cumulative · {n_closed} trades</span>
+      </div>
+      <div class="chart-cell-large"><canvas id="equity"></canvas></div>
+      <div class="stat-bar">
+        <div>Max drawdown <strong style="color:{color_for(max_dd)}">${max_dd:+.2f}</strong></div>
+        <div>Avg trade <strong style="color:{color_for(avg_trade)}">${avg_trade:+.2f}</strong></div>
+        <div>Best <strong style="color:var(--green)">${max(pnls, default=0):+.2f}</strong></div>
+        <div>Worst <strong style="color:var(--red)">${min(pnls, default=0):+.2f}</strong></div>
+      </div>
+    </div>
 
-<div class="grid2">
-  <div class="card-wide">
-    <h2>📉 Drawdown</h2>
-    <div class="chart-cell"><canvas id="drawdown"></canvas></div>
-    {f'<div class="empty-msg">No drawdown to plot yet</div>' if not closed else ''}
+    <div class="card">
+      <div class="card-title">⚡ Activity feed</div>
+      <div style="max-height:380px;overflow-y:auto">
+        {activity_html}
+      </div>
+    </div>
   </div>
-  <div class="card-wide">
-    <h2>🎯 Rolling 20-trade win rate</h2>
-    <div class="chart-cell"><canvas id="rollwin"></canvas></div>
-    {f'<div class="empty-msg">Need 20+ trades for rolling stat</div>' if len(rolling_winrate_x) == 0 else ''}
-  </div>
-</div>
 
-<div class="card-wide">
-  <h2>🔮 Forecast cone (bootstrap of next 100 trades, based on backtest)</h2>
-  <div class="legend-row">
-    <div><span class="legend-dot" style="background:#0969da"></span>Live equity</div>
-    <div><span class="legend-dot" style="background:rgba(46,160,67,0.3)"></span>5%-95% projection cone</div>
-    <div><span class="legend-dot" style="background:#2ea043"></span>Median projection</div>
+  <!-- OPEN POSITIONS -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-title">
+      <div class="card-title-row">🎯 Open positions <span class="chip">{n_open}/10</span></div>
+    </div>
+    {position_cards}
   </div>
-  <div class="chart-cell" style="height:260px"><canvas id="forecast"></canvas></div>
-  <div class="highlight">
-    With $7.66 expected/trade and $70 std (from backtest), bootstrap says:
-    in 100 more trades, projected PnL median = +${EXP_AVG_TRADE * 100:.0f},
-    p5 = ${EXP_AVG_TRADE * 100 - 1.65 * EXP_STD * (100**0.5):.0f},
-    p95 = ${EXP_AVG_TRADE * 100 + 1.65 * EXP_STD * (100**0.5):.0f}.
-  </div>
-</div>
 
-<div class="grid2">
-  <div class="card-wide">
-    <h2>💰 PnL distribution</h2>
-    <div class="chart-cell"><canvas id="pnlhist"></canvas></div>
-    {f'<div class="empty-msg">No trades yet</div>' if not closed else ''}
-  </div>
-  <div class="card-wide">
-    <h2>⏱ Hold-time distribution</h2>
-    <div class="chart-cell"><canvas id="holdhist"></canvas></div>
-    {f'<div class="empty-msg">No trades yet</div>' if not trades else ''}
-  </div>
-</div>
+  <!-- BOT HEALTH + LIFETIME STATS -->
+  <div class="row-2-1">
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-row">🫀 Recent cycles (heartbeat)</div>
+        <span style="color:var(--text-mute);font-size:11px">scan every ~15min</span>
+      </div>
+      <div style="max-height:340px;overflow-y:auto">
+        <table>
+          <thead>
+            <tr><th>Time</th><th>Cycle</th><th class="num">Markets</th><th class="num">Signals</th><th class="num">Opened</th><th class="num">Closed</th><th>Filters</th></tr>
+          </thead>
+          <tbody>{cycle_rows}</tbody>
+        </table>
+      </div>
+    </div>
 
-<div class="grid2">
-  <div class="card-wide">
-    <h2>⚡ Entry z-score distribution</h2>
-    <div class="chart-cell"><canvas id="zhist"></canvas></div>
-    {f'<div class="empty-msg">No signals yet</div>' if not trades else ''}
+    <div class="card">
+      <div class="card-title">📊 Lifetime totals</div>
+      <div style="display:grid;grid-template-columns:1fr;gap:12px;font-size:13px">
+        <div><div style="color:var(--text-mute);font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Markets scanned</div><div class="mono" style="font-size:22px;font-weight:600">{total_markets_scanned:,}</div></div>
+        <div><div style="color:var(--text-mute);font-size:11px;text-transform:uppercase;letter-spacing:0.05em">z≥5 signals seen</div><div class="mono" style="font-size:22px;font-weight:600">{total_signals_seen}</div></div>
+        <div><div style="color:var(--text-mute);font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Conversion (signals → entries)</div><div class="mono" style="font-size:22px;font-weight:600">{(100*sum(c.get('opened',0) for c in cycles)/total_signals_seen) if total_signals_seen else 0:.1f}%</div></div>
+        <div><div style="color:var(--text-mute);font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Filter rejection split</div>
+          <div style="margin-top:4px">
+            {''.join(f'<span class="chip" style="margin:2px 4px 2px 0">{k.replace("_", " ")}: <strong style="color:var(--text)">{v:,}</strong></span>' for k, v in sorted(lifetime_rejections.items(), key=lambda x: -x[1])[:8] if v > 0)}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="card-wide">
-    <h2>🏷 Performance by market category</h2>
-    <table>
-      <thead>
-        <tr><th>Category</th><th>n</th><th>Win%</th><th>Avg</th><th>Total</th></tr>
-      </thead>
-      <tbody>{cat_rows}</tbody>
-    </table>
+
+  <!-- CHARTS GRID -->
+  <div class="row-1-1-1">
+    <div class="card">
+      <div class="card-title">📉 Drawdown</div>
+      <div class="chart-cell"><canvas id="drawdown"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎯 Rolling 20-trade win rate</div>
+      <div class="chart-cell"><canvas id="rollwin"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔮 Forecast cone (next 100 trades)</div>
+      <div class="chart-cell"><canvas id="forecast"></canvas></div>
+    </div>
   </div>
-</div>
 
-<div class="card-wide">
-  <h2>🫀 Bot health — recent cycles (last {len(recent_cycles)})</h2>
-  <p style="color:#656d76;font-size:12px;margin:0 0 8px">Each cycle scans ~3000 markets. Most are filtered out. The bot is healthy if cycles keep appearing here.</p>
-  <table>
-    <thead>
-      <tr><th>Time</th><th>#</th><th>Universe</th><th>Scanned</th><th>z≥5 signals</th><th>Opened</th><th>Closed</th><th>Now open</th><th>Top filter rejections</th></tr>
-    </thead>
-    <tbody>{cycle_rows}</tbody>
-  </table>
-  <div class="legend-row" style="margin-top:8px">
-    <div>Lifetime: <strong>{total_markets_scanned:,}</strong> markets scanned · <strong>{total_signals_seen}</strong> z≥5 signals seen · <strong>{n_open}</strong> currently open</div>
+  <div class="row-1-1">
+    <div class="card">
+      <div class="card-title">💰 PnL distribution per trade</div>
+      <div class="chart-cell"><canvas id="pnlhist"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏷 Performance by category</div>
+      <table>
+        <thead>
+          <tr><th>Category</th><th class="num">n</th><th class="num">Win%</th><th class="num">Avg</th><th class="num">Total</th></tr>
+        </thead>
+        <tbody>{cat_rows}</tbody>
+      </table>
+    </div>
   </div>
-</div>
 
-<div class="card-wide">
-  <h2>🎮 Open positions ({n_open})</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Market</th>
-        <th>z</th>
-        <th>Dir</th>
-        <th>Exec px</th>
-        <th>Spread</th>
-        <th>Shares</th>
-        <th>Stake</th>
-        <th>Held</th>
-        <th>DTE</th>
-        <th>CLV</th>
-        <th>Category</th>
-      </tr>
-    </thead>
-    <tbody>{open_rows}</tbody>
-  </table>
-</div>
+  <!-- RECENT TRADES -->
+  <div class="card" style="margin-top:14px">
+    <div class="card-title">📋 Recent closed trades</div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Exit</th><th>Market</th><th class="num">z</th><th class="center">Dir</th>
+            <th class="num">Px in→out</th><th class="num">Spread</th><th class="num">Stake</th>
+            <th class="num">Held</th><th>Reason</th><th class="num">CLV</th><th class="num">Fees</th><th class="num">Net</th>
+          </tr>
+        </thead>
+        <tbody>{recent_trade_rows}</tbody>
+      </table>
+    </div>
+  </div>
 
-<div class="card-wide">
-  <h2>📋 Recent closed trades (latest 30)</h2>
-  {best_html}
-  {worst_html}
-  <table style="margin-top:8px">
-    <thead>
-      <tr>
-        <th>Exit time</th>
-        <th>Market</th>
-        <th>z</th>
-        <th>Dir</th>
-        <th>Px entry→exit</th>
-        <th>Spread</th>
-        <th>Stake</th>
-        <th>Held</th>
-        <th>Exit why</th>
-        <th>CLV</th>
-        <th>Fees</th>
-        <th>Net PnL</th>
-      </tr>
-    </thead>
-    <tbody>{recent_rows}</tbody>
-  </table>
+  <footer>
+    <div>Auto-refresh 60s · v1 strategy (z≥5, both directions, max 48h hold)</div>
+    <div>{n_closed} closed · {n_open} open · {cycles_run} cycles</div>
+  </footer>
+
 </div>
 
 <script>
+const DARK = {{
+  text: '#e6edf3', textDim: '#8b949e', textMute: '#6e7681',
+  bg: '#11161d', surface: '#161b22', border: '#30363d',
+  green: '#3fb950', red: '#f85149', blue: '#58a6ff', purple: '#a371f7', amber: '#d29922'
+}};
+
+Chart.defaults.color = DARK.textDim;
+Chart.defaults.borderColor = DARK.border;
+Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, Inter, system-ui';
+Chart.defaults.scale.grid.color = DARK.border + '40';
+Chart.defaults.scale.grid.drawBorder = false;
+Chart.defaults.plugins.legend.display = false;
+
 const COMMON = {{
     responsive: true, maintainAspectRatio: false,
-    plugins: {{ legend: {{ display: false }}, tooltip: {{ mode: 'index', intersect: false }} }},
+    plugins: {{
+        legend: {{ display: false }},
+        tooltip: {{ mode: 'index', intersect: false, backgroundColor: '#0a0e14', borderColor: DARK.border, borderWidth: 1, titleColor: DARK.text, bodyColor: DARK.text, padding: 10 }}
+    }},
     interaction: {{ mode: 'nearest', intersect: false }}
 }};
 
@@ -506,56 +659,66 @@ if (equity_y.length > 0) {{
         data: {{
             labels: equity_x,
             datasets: [
-                {{ label: 'Live PnL', data: equity_y, borderColor: '#0969da', backgroundColor: 'rgba(9, 105, 218, 0.1)', fill: true, tension: 0.1, pointRadius: 2 }},
-                {{ label: 'Expected (backtest)', data: baseline_y, borderColor: '#999', borderDash: [4, 4], pointRadius: 0, fill: false }},
-                {{ label: 'Break-even', data: equity_y.map(() => 0), borderColor: '#cf222e', borderDash: [2, 2], pointRadius: 0, fill: false }},
+                {{ label: 'Expected', data: baseline_y, borderColor: DARK.textMute, borderDash: [4, 4], pointRadius: 0, fill: false, borderWidth: 1.5 }},
+                {{ label: 'Break-even', data: equity_y.map(() => 0), borderColor: DARK.red + '66', borderDash: [2, 4], pointRadius: 0, fill: false, borderWidth: 1 }},
+                {{ label: 'Live', data: equity_y, borderColor: DARK.blue, backgroundColor: DARK.blue + '22', fill: true, tension: 0.2, pointRadius: 3, pointBackgroundColor: DARK.blue, borderWidth: 2 }},
             ]
         }},
-        options: {{ ...COMMON, scales: {{ x: {{ ticks: {{ maxTicksLimit: 8 }} }} }} }}
+        options: {{ ...COMMON, scales: {{ x: {{ ticks: {{ maxTicksLimit: 8 }} }}, y: {{ ticks: {{ callback: (v) => '$' + v }} }} }} }}
     }});
+}} else {{
+    document.getElementById('equity').parentElement.innerHTML = '<div class="empty-state">No closed trades yet · waiting for first z≥5 signal to revert</div>';
 }}
 
+// Drawdown
 const drawdown_y = {json.dumps(drawdown_y)};
 if (drawdown_y.length > 0) {{
     new Chart(document.getElementById('drawdown'), {{
         type: 'line',
-        data: {{ labels: equity_x, datasets: [{{ data: drawdown_y, borderColor: '#cf222e', backgroundColor: 'rgba(207, 34, 46, 0.15)', fill: 'origin', pointRadius: 0 }}] }},
-        options: {{ ...COMMON, scales: {{ x: {{ ticks: {{ maxTicksLimit: 6 }} }}, y: {{ max: 0 }} }} }}
+        data: {{ labels: equity_x, datasets: [{{ data: drawdown_y, borderColor: DARK.red, backgroundColor: DARK.red + '22', fill: 'origin', pointRadius: 0, borderWidth: 2 }}] }},
+        options: {{ ...COMMON, scales: {{ x: {{ ticks: {{ maxTicksLimit: 6 }} }}, y: {{ max: 0, ticks: {{ callback: (v) => '$' + v }} }} }} }}
     }});
+}} else {{
+    document.getElementById('drawdown').parentElement.innerHTML = '<div class="empty-state-small">no data</div>';
 }}
 
+// Rolling win rate
 const rw_x = {json.dumps(rolling_winrate_x)};
 const rw_y = {json.dumps(rolling_winrate_y)};
 if (rw_y.length > 0) {{
     new Chart(document.getElementById('rollwin'), {{
         type: 'line',
         data: {{ labels: rw_x, datasets: [
-            {{ data: rw_y, borderColor: '#2ea043', backgroundColor: 'rgba(46, 160, 67, 0.1)', fill: true, pointRadius: 2 }},
-            {{ data: rw_y.map(() => {EXP_WIN_RATE}), borderColor: '#999', borderDash: [4, 4], pointRadius: 0, fill: false, label: 'expected' }}
+            {{ data: rw_y.map(() => {EXP_WIN_RATE}), borderColor: DARK.textMute, borderDash: [4, 4], pointRadius: 0, fill: false, borderWidth: 1 }},
+            {{ data: rw_y, borderColor: DARK.green, backgroundColor: DARK.green + '22', fill: true, pointRadius: 2, borderWidth: 2 }},
         ] }},
-        options: {{ ...COMMON, scales: {{ y: {{ min: 0, max: 100 }} }} }}
+        options: {{ ...COMMON, scales: {{ y: {{ min: 0, max: 100, ticks: {{ callback: (v) => v + '%' }} }} }} }}
     }});
+}} else {{
+    document.getElementById('rollwin').parentElement.innerHTML = '<div class="empty-state-small">need 20+ trades</div>';
 }}
 
 // Forecast cone
-const proj_x = {json.dumps(projection_x)};
 const proj_p5 = {json.dumps(projections_p5)};
 const proj_p50 = {json.dumps(projections_p50)};
 const proj_p95 = {json.dumps(projections_p95)};
-const forecast_labels = equity_y.concat(proj_p50.map(() => '')).map((_, i) => i + 1);
-const live_padded = equity_y.concat(proj_p50.map(() => null));
-const p5_padded = equity_y.map(() => null).concat(proj_p5);
-const p50_padded = equity_y.map(() => null).concat(proj_p50);
-const p95_padded = equity_y.map(() => null).concat(proj_p95);
+const n_closed = {n_closed};
+const labels_forecast = [];
+for (let i = 1; i <= n_closed + proj_p50.length; i++) labels_forecast.push(i);
+const live_p = equity_y.concat(proj_p50.map(() => null));
+const p5_p = equity_y.map(() => null).concat(proj_p5);
+const p50_p = equity_y.map(() => null).concat(proj_p50);
+const p95_p = equity_y.map(() => null).concat(proj_p95);
+
 new Chart(document.getElementById('forecast'), {{
     type: 'line',
-    data: {{ labels: forecast_labels, datasets: [
-        {{ label: 'p95', data: p95_padded, borderColor: 'rgba(46,160,67,0.5)', backgroundColor: 'rgba(46,160,67,0.15)', fill: '+1', pointRadius: 0 }},
-        {{ label: 'p5', data: p5_padded, borderColor: 'rgba(46,160,67,0.5)', backgroundColor: 'rgba(46,160,67,0.15)', fill: false, pointRadius: 0 }},
-        {{ label: 'median', data: p50_padded, borderColor: '#2ea043', pointRadius: 0, fill: false }},
-        {{ label: 'Live', data: live_padded, borderColor: '#0969da', backgroundColor: 'rgba(9,105,218,0.2)', pointRadius: 2, fill: false }},
+    data: {{ labels: labels_forecast, datasets: [
+        {{ data: p95_p, borderColor: DARK.green + '66', backgroundColor: DARK.green + '15', fill: '+1', pointRadius: 0, borderWidth: 1 }},
+        {{ data: p5_p, borderColor: DARK.green + '66', fill: false, pointRadius: 0, borderWidth: 1 }},
+        {{ data: p50_p, borderColor: DARK.green, pointRadius: 0, fill: false, borderWidth: 2 }},
+        {{ data: live_p, borderColor: DARK.blue, backgroundColor: DARK.blue + '22', pointRadius: 1.5, fill: false, borderWidth: 2 }},
     ] }},
-    options: {{ ...COMMON, scales: {{ x: {{ title: {{ display: true, text: 'Trade #' }} }} }} }}
+    options: {{ ...COMMON, scales: {{ y: {{ ticks: {{ callback: (v) => '$' + v }} }} }} }}
 }});
 
 // PnL histogram
@@ -563,44 +726,16 @@ const pnls = {json.dumps(pnls)};
 if (pnls.length > 0) {{
     const bins = 25; const min = Math.min(...pnls), max = Math.max(...pnls);
     const range = max - min || 1; const w = range / bins;
-    const buckets = new Array(bins).fill(0);
-    const labels = [];
+    const buckets = new Array(bins).fill(0); const labels = [];
     for (let i = 0; i < bins; i++) labels.push((min + w * (i + 0.5)).toFixed(1));
     pnls.forEach(p => buckets[Math.min(bins - 1, Math.floor((p - min) / w))]++);
     new Chart(document.getElementById('pnlhist'), {{
         type: 'bar',
-        data: {{ labels: labels, datasets: [{{ data: buckets, backgroundColor: labels.map(l => parseFloat(l) >= 0 ? '#2ea043' : '#cf222e') }}] }},
+        data: {{ labels: labels, datasets: [{{ data: buckets, backgroundColor: labels.map(l => parseFloat(l) >= 0 ? DARK.green + 'cc' : DARK.red + 'cc'), borderWidth: 0 }}] }},
         options: COMMON
     }});
-}}
-
-// Hold-time histogram
-const holds = {json.dumps(hold_times)};
-if (holds.length > 0) {{
-    const bins = 12; const max = Math.max(...holds, 48); const w = max / bins;
-    const buckets = new Array(bins).fill(0); const labels = [];
-    for (let i = 0; i < bins; i++) labels.push((w * (i + 0.5)).toFixed(0) + 'h');
-    holds.forEach(h => buckets[Math.min(bins - 1, Math.floor(h / w))]++);
-    new Chart(document.getElementById('holdhist'), {{
-        type: 'bar',
-        data: {{ labels: labels, datasets: [{{ data: buckets, backgroundColor: '#0969da' }}] }},
-        options: COMMON
-    }});
-}}
-
-// Z-score histogram
-const zs = {json.dumps(entry_zs)};
-if (zs.length > 0) {{
-    const bins = 15; const min = Math.min(...zs), max = Math.max(...zs);
-    const range = max - min || 1; const w = range / bins;
-    const buckets = new Array(bins).fill(0); const labels = [];
-    for (let i = 0; i < bins; i++) labels.push((min + w * (i + 0.5)).toFixed(1));
-    zs.forEach(z => buckets[Math.min(bins - 1, Math.floor((z - min) / w))]++);
-    new Chart(document.getElementById('zhist'), {{
-        type: 'bar',
-        data: {{ labels: labels, datasets: [{{ data: buckets, backgroundColor: '#a371f7' }}] }},
-        options: COMMON
-    }});
+}} else {{
+    document.getElementById('pnlhist').parentElement.innerHTML = '<div class="empty-state-small">no trades</div>';
 }}
 </script>
 
@@ -610,6 +745,4 @@ if (zs.length > 0) {{
 
 OUT.write_text(html)
 print(f"Generated {OUT}")
-print(f"  closed trades: {n_closed}")
-print(f"  open positions: {n_open}")
-print(f"  total PnL: ${total_pnl:+.2f}")
+print(f"  closed: {n_closed}  open: {n_open}  cycles: {len(cycles)}  total_pnl: ${total_pnl:+.2f}")
