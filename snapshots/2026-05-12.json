@@ -1,0 +1,31 @@
+{
+  "date": "2026-05-12",
+  "ts": 1778613513,
+  "cycle": 2,
+  "universe_size": 3174,
+  "open_positions_count": 2,
+  "open_positions_summary": [
+    {
+      "market_id": "1908634",
+      "question": "Will Kanye West visit Israel by June 30?",
+      "entry_z": 10.392982697176059,
+      "entry_exec_price": 0.05042590976651484,
+      "direction": -1,
+      "shares": 105.4213909378293,
+      "held_hours": 0.0,
+      "clv_value": null,
+      "dte": 48.195462962962964
+    },
+    {
+      "market_id": "2199384",
+      "question": "LoL: Unicorns Of Love Sexy Edition vs ROSSMANN Centaurs - Game 2 Winner",
+      "entry_z": -50.37470032518685,
+      "entry_exec_price": 0.36,
+      "direction": 1,
+      "shares": 285.7142857142857,
+      "held_hours": 0.0,
+      "clv_value": null,
+      "dte": 0.19197916666666667
+    }
+  ]
+}
