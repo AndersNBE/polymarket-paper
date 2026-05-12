@@ -165,6 +165,10 @@
   /* Position chart per open position */
   .pos-chart-wrap { position: relative; height: 120px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
   .pos-chart { width: 100% !important; height: 110px !important; max-height: 110px; display: block; }
+  .closed-card { background: var(--surface); }
+  .closed-card .pos-card-top { align-items: center; }
+  .exit-reason { font-size: 11px; color: var(--text-dim); margin-top: 10px; padding: 6px 10px; background: var(--surface-2); border-radius: 6px; border-left: 2px solid var(--text-mute); }
+  .exit-reason strong { color: var(--text); }
 
   /* Animated numbers — initial fade in */
   .animated-num { animation: fadeUp 0.6s ease-out; }
@@ -193,14 +197,14 @@
       <div class="logo-mark">P</div>
       <div class="logo-text">
         <h1>Polymarket Paper Trader</h1>
-        <div class="sub">2026-05-12 20:56:53 UTC · Cycle #8 · Started 2026-05-12</div>
+        <div class="sub">2026-05-12 21:01:18 UTC · Cycle #8 · Started 2026-05-12</div>
       </div>
     </div>
     <div class="live-pill">
       <span class="live-dot"></span>
       <span style="color:#3fb950;font-weight:600">LIVE</span>
       <span style="color:var(--text-mute)">·</span>
-      <span style="color:var(--text-dim)">9m ago</span>
+      <span style="color:var(--text-dim)">13m ago</span>
     </div>
   </header>
 
@@ -236,7 +240,7 @@
     <div class="hero-cell">
       <div class="hero-label">Open Positions</div>
       <div class="hero-value mono">10<span style="font-size:18px;color:var(--text-dim)">/10</span></div>
-      <div class="hero-sub">$1028 deployed of $720</div>
+      <div class="hero-sub">$1028 deployed ⚠ exceeds $720 bankroll (legacy $100 stakes)</div>
       <div class="sparkline-wrap"><canvas class="sparkline" id="spark_pos" width="200" height="30"></canvas></div>
     </div>
   </div>
@@ -401,7 +405,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.360</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$103</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.4h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.5h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#7d8590">pending</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">crypto</span></div>
@@ -418,7 +422,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.440</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">2.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$102</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.4h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.5h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#7d8590">pending</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">crypto</span></div>
@@ -435,7 +439,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.388</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$103</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.6h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.7h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#7d8590">pending</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">crypto</span></div>
@@ -452,7 +456,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.312</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">5.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$103</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.6h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.7h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">48d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#7d8590">pending</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">tech</span></div>
@@ -469,7 +473,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.295</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">2.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$104</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.6h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.7h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#7d8590">pending</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">sports</span></div>
@@ -486,7 +490,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.150</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$101</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.4h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.5h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">232d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#f85149">-7.50¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">politics</span></div>
@@ -503,7 +507,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.617</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">4.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$102</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.4h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.5h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">3d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#f85149">-5.50¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">culture</span></div>
@@ -520,7 +524,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.858</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$108</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.4h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.5h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#f85149">-12.45¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">crypto</span></div>
@@ -537,7 +541,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.050</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">2.4¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$100</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.6h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.7h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">48d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#f85149">-5.30¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">culture</span></div>
@@ -554,7 +558,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.360</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$103</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.6h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.7h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#3fb950">+66.45¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">sports</span></div>
@@ -562,6 +566,32 @@
         <div class="pos-chart-wrap"><canvas class="pos-chart" id="poschart_2199384" width="600" height="120"></canvas></div>
     </div>
   </div>
+
+  <!-- RECENTLY CLOSED POSITIONS WITH CHARTS -->
+  
+    <div class="card" style="margin-bottom:14px">
+        <div class="card-title">
+            <div class="card-title-row">📜 Recently closed (with trajectory + exit reason)</div>
+            <span style="color:var(--text-mute);font-size:11px">last 1</span>
+        </div>
+        
+    <div class="pos-card closed-card">
+        <div class="pos-card-top">
+            <div class="pos-question">Will Lithuania be in the top 10 at Eurovision 2026?</div>
+            <div class="pos-pnl" style="color:#f85149;font-weight:600;font-size:15px">$-11.74</div>
+        </div>
+        <div class="pos-stats">
+            <div class="pos-stat"><span class="pos-stat-label">z entry</span><span class="pos-stat-val">+5.94σ</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Dir</span><span class="pos-stat-val" style="color:#f85149">SHORT</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Px in→out</span><span class="pos-stat-val">0.098→0.188</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.8h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val">+1.50¢</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Fees</span><span class="pos-stat-val">$1.65</span></div>
+        </div>
+        <div class="exit-reason">Exit: <strong>z_revert</strong> — z reverted below 0.5σ — mean reversion completed</div>
+        <div class="pos-chart-wrap"><canvas class="pos-chart" id="closedchart_1390422_1778618021" width="600" height="120"></canvas></div>
+    </div>
+    </div>
 
   <!-- BOT HEALTH + LIFETIME STATS -->
   <div class="row-2-1">
@@ -862,7 +892,7 @@ if (wGross !== 0 || wFees !== 0 || wGas !== 0) {
 }
 
 // ── Per-position price trajectory charts ──
-const POSITION_CHARTS = {"1908634": {"bars": [{"t": 1778443210, "p": 0.0445}, {"t": 1778446810, "p": 0.0445}, {"t": 1778450407, "p": 0.0445}, {"t": 1778454009, "p": 0.0435}, {"t": 1778457611, "p": 0.0435}, {"t": 1778461204, "p": 0.0435}, {"t": 1778464820, "p": 0.0435}, {"t": 1778468407, "p": 0.0435}, {"t": 1778472006, "p": 0.0435}, {"t": 1778475606, "p": 0.0435}, {"t": 1778479208, "p": 0.0435}, {"t": 1778482819, "p": 0.0435}, {"t": 1778486405, "p": 0.0565}, {"t": 1778490008, "p": 0.0565}, {"t": 1778493605, "p": 0.0565}, {"t": 1778497216, "p": 0.0575}, {"t": 1778500811, "p": 0.0575}, {"t": 1778504409, "p": 0.057}, {"t": 1778508006, "p": 0.052}, {"t": 1778511616, "p": 0.052}, {"t": 1778515206, "p": 0.0575}, {"t": 1778518811, "p": 0.058}, {"t": 1778522413, "p": 0.058}, {"t": 1778526010, "p": 0.058}, {"t": 1778529608, "p": 0.058}, {"t": 1778533211, "p": 0.0515}, {"t": 1778536810, "p": 0.0515}, {"t": 1778540408, "p": 0.0465}, {"t": 1778544012, "p": 0.0465}, {"t": 1778547606, "p": 0.0465}, {"t": 1778551207, "p": 0.0465}, {"t": 1778554810, "p": 0.0465}, {"t": 1778558406, "p": 0.046}, {"t": 1778562009, "p": 0.046}, {"t": 1778565611, "p": 0.046}, {"t": 1778569216, "p": 0.046}, {"t": 1778572809, "p": 0.046}, {"t": 1778576410, "p": 0.046}, {"t": 1778580005, "p": 0.046}, {"t": 1778583607, "p": 0.046}, {"t": 1778587210, "p": 0.046}, {"t": 1778590806, "p": 0.046}, {"t": 1778594408, "p": 0.046}, {"t": 1778598012, "p": 0.046}, {"t": 1778601607, "p": 0.046}, {"t": 1778605229, "p": 0.046}, {"t": 1778608809, "p": 0.046}, {"t": 1778612410, "p": 0.078}, {"t": 1778616010, "p": 0.142}, {"t": 1778619366, "p": 0.123}], "entry_ts": 1778613513, "entry_price": 0.05042590976651484, "entry_mid": 0.1185, "direction": -1, "entry_z": 10.392982697176059}, "2199384": {"bars": [{"t": 1778443213, "p": 0.87}, {"t": 1778446813, "p": 0.87}, {"t": 1778450409, "p": 0.87}, {"t": 1778454013, "p": 0.875}, {"t": 1778457612, "p": 0.875}, {"t": 1778461205, "p": 0.88}, {"t": 1778464821, "p": 0.875}, {"t": 1778468408, "p": 0.88}, {"t": 1778472006, "p": 0.87}, {"t": 1778475607, "p": 0.865}, {"t": 1778479209, "p": 0.86}, {"t": 1778482820, "p": 0.86}, {"t": 1778486406, "p": 0.865}, {"t": 1778490010, "p": 0.865}, {"t": 1778493606, "p": 0.865}, {"t": 1778497216, "p": 0.875}, {"t": 1778500813, "p": 0.875}, {"t": 1778504409, "p": 0.87}, {"t": 1778508006, "p": 0.87}, {"t": 1778511624, "p": 0.87}, {"t": 1778515207, "p": 0.87}, {"t": 1778518826, "p": 0.87}, {"t": 1778522423, "p": 0.87}, {"t": 1778526012, "p": 0.875}, {"t": 1778529610, "p": 0.88}, {"t": 1778533219, "p": 0.885}, {"t": 1778536814, "p": 0.88}, {"t": 1778540413, "p": 0.88}, {"t": 1778544018, "p": 0.88}, {"t": 1778547607, "p": 0.88}, {"t": 1778551208, "p": 0.88}, {"t": 1778554813, "p": 0.865}, {"t": 1778558407, "p": 0.845}, {"t": 1778562010, "p": 0.875}, {"t": 1778565613, "p": 0.875}, {"t": 1778569218, "p": 0.875}, {"t": 1778572811, "p": 0.875}, {"t": 1778576412, "p": 0.875}, {"t": 1778580006, "p": 0.885}, {"t": 1778583608, "p": 0.885}, {"t": 1778587213, "p": 0.895}, {"t": 1778590808, "p": 0.895}, {"t": 1778594409, "p": 0.895}, {"t": 1778598015, "p": 0.895}, {"t": 1778601608, "p": 0.895}, {"t": 1778605233, "p": 0.88}, {"t": 1778608812, "p": 0.885}, {"t": 1778612411, "p": 0.875}, {"t": 1778616013, "p": 0.9995}, {"t": 1778619367, "p": 0.9995}], "entry_ts": 1778613513, "entry_price": 0.36, "entry_mid": 0.335, "direction": 1, "entry_z": -50.37470032518685}, "665513": {"bars": [{"t": 1778443213, "p": 0.135}, {"t": 1778446813, "p": 0.135}, {"t": 1778450409, "p": 0.135}, {"t": 1778454013, "p": 0.135}, {"t": 1778457612, "p": 0.135}, {"t": 1778461205, "p": 0.135}, {"t": 1778464821, "p": 0.135}, {"t": 1778468408, "p": 0.135}, {"t": 1778472006, "p": 0.135}, {"t": 1778475607, "p": 0.135}, {"t": 1778479209, "p": 0.135}, {"t": 1778482820, "p": 0.135}, {"t": 1778486406, "p": 0.135}, {"t": 1778490010, "p": 0.135}, {"t": 1778493606, "p": 0.135}, {"t": 1778497217, "p": 0.135}, {"t": 1778500813, "p": 0.135}, {"t": 1778504410, "p": 0.135}, {"t": 1778508007, "p": 0.135}, {"t": 1778511626, "p": 0.135}, {"t": 1778515207, "p": 0.135}, {"t": 1778518826, "p": 0.135}, {"t": 1778522425, "p": 0.135}, {"t": 1778526013, "p": 0.135}, {"t": 1778529611, "p": 0.135}, {"t": 1778533220, "p": 0.135}, {"t": 1778536814, "p": 0.135}, {"t": 1778540413, "p": 0.135}, {"t": 1778544019, "p": 0.135}, {"t": 1778547607, "p": 0.135}, {"t": 1778551208, "p": 0.135}, {"t": 1778554813, "p": 0.135}, {"t": 1778558407, "p": 0.135}, {"t": 1778562010, "p": 0.135}, {"t": 1778565614, "p": 0.135}, {"t": 1778569218, "p": 0.135}, {"t": 1778572811, "p": 0.135}, {"t": 1778576412, "p": 0.135}, {"t": 1778580006, "p": 0.135}, {"t": 1778583608, "p": 0.145}, {"t": 1778587213, "p": 0.145}, {"t": 1778590808, "p": 0.145}, {"t": 1778594409, "p": 0.145}, {"t": 1778598015, "p": 0.145}, {"t": 1778601608, "p": 0.155}, {"t": 1778605234, "p": 0.155}, {"t": 1778608812, "p": 0.155}, {"t": 1778612411, "p": 0.155}, {"t": 1778616013, "p": 0.27}, {"t": 1778619367, "p": 0.205}], "entry_ts": 1778614400, "entry_price": 0.15008735091550474, "entry_mid": 0.19, "direction": -1, "entry_z": 6.5016645400270265}, "1390343": {"bars": [{"t": 1778443207, "p": 0.43}, {"t": 1778446805, "p": 0.44}, {"t": 1778450405, "p": 0.445}, {"t": 1778454003, "p": 0.44}, {"t": 1778457608, "p": 0.445}, {"t": 1778461204, "p": 0.445}, {"t": 1778464819, "p": 0.445}, {"t": 1778468404, "p": 0.445}, {"t": 1778472004, "p": 0.445}, {"t": 1778475605, "p": 0.455}, {"t": 1778479205, "p": 0.455}, {"t": 1778482818, "p": 0.455}, {"t": 1778486404, "p": 0.455}, {"t": 1778490006, "p": 0.455}, {"t": 1778493604, "p": 0.39}, {"t": 1778497215, "p": 0.415}, {"t": 1778500806, "p": 0.425}, {"t": 1778504407, "p": 0.465}, {"t": 1778508004, "p": 0.47}, {"t": 1778511607, "p": 0.53}, {"t": 1778515204, "p": 0.585}, {"t": 1778518805, "p": 0.58}, {"t": 1778522407, "p": 0.575}, {"t": 1778526006, "p": 0.575}, {"t": 1778529604, "p": 0.625}, {"t": 1778533204, "p": 0.63}, {"t": 1778536804, "p": 0.575}, {"t": 1778540405, "p": 0.585}, {"t": 1778544004, "p": 0.605}, {"t": 1778547605, "p": 0.605}, {"t": 1778551204, "p": 0.61}, {"t": 1778554805, "p": 0.615}, {"t": 1778558405, "p": 0.61}, {"t": 1778562007, "p": 0.605}, {"t": 1778565606, "p": 0.63}, {"t": 1778569215, "p": 0.625}, {"t": 1778572806, "p": 0.595}, {"t": 1778576406, "p": 0.595}, {"t": 1778580004, "p": 0.595}, {"t": 1778583605, "p": 0.595}, {"t": 1778587205, "p": 0.605}, {"t": 1778590805, "p": 0.6}, {"t": 1778594406, "p": 0.6}, {"t": 1778598006, "p": 0.6}, {"t": 1778601605, "p": 0.605}, {"t": 1778605224, "p": 0.605}, {"t": 1778608805, "p": 0.605}, {"t": 1778612408, "p": 0.635}, {"t": 1778616008, "p": 0.49}, {"t": 1778619366, "p": 0.43}], "entry_ts": 1778614400, "entry_price": 0.6165111911097199, "entry_mid": 0.535, "direction": 1, "entry_z": -5.0403039808518475}, "2224431": {"bars": [{"t": 1778443209, "p": 0.5}, {"t": 1778446809, "p": 0.5}, {"t": 1778450406, "p": 0.5}, {"t": 1778454007, "p": 0.5}, {"t": 1778457610, "p": 0.5}, {"t": 1778461204, "p": 0.5}, {"t": 1778464820, "p": 0.5}, {"t": 1778468406, "p": 0.5}, {"t": 1778472005, "p": 0.5}, {"t": 1778475606, "p": 0.5}, {"t": 1778479207, "p": 0.5}, {"t": 1778482819, "p": 0.5}, {"t": 1778486405, "p": 0.5}, {"t": 1778490007, "p": 0.5}, {"t": 1778493604, "p": 0.5}, {"t": 1778497216, "p": 0.5}, {"t": 1778500810, "p": 0.5}, {"t": 1778504408, "p": 0.5}, {"t": 1778508005, "p": 0.5}, {"t": 1778511613, "p": 0.5}, {"t": 1778515206, "p": 0.5}, {"t": 1778518809, "p": 0.5}, {"t": 1778522411, "p": 0.5}, {"t": 1778526008, "p": 0.5}, {"t": 1778529607, "p": 0.5}, {"t": 1778533207, "p": 0.5}, {"t": 1778536808, "p": 0.5}, {"t": 1778540407, "p": 0.5}, {"t": 1778544009, "p": 0.5}, {"t": 1778547606, "p": 0.5}, {"t": 1778551206, "p": 0.5}, {"t": 1778554809, "p": 0.5}, {"t": 1778558406, "p": 0.5}, {"t": 1778562008, "p": 0.5}, {"t": 1778565609, "p": 0.5}, {"t": 1778569216, "p": 0.5}, {"t": 1778572808, "p": 0.5}, {"t": 1778576409, "p": 0.5}, {"t": 1778580004, "p": 0.5}, {"t": 1778583606, "p": 0.5}, {"t": 1778587208, "p": 0.5}, {"t": 1778590806, "p": 0.5}, {"t": 1778594407, "p": 0.5}, {"t": 1778598009, "p": 0.5}, {"t": 1778601606, "p": 0.5}, {"t": 1778605227, "p": 0.5}, {"t": 1778608808, "p": 0.485}, {"t": 1778612409, "p": 0.475}, {"t": 1778616009, "p": 0.9995}, {"t": 1778619366, "p": 0.9995}], "entry_ts": 1778614400, "entry_price": 0.857725992503843, "entry_mid": 0.875, "direction": -1, "entry_z": 65.93097615704828}, "631120": {"bars": [{"t": 1778446812, "p": 0.255}, {"t": 1778450408, "p": 0.255}, {"t": 1778454011, "p": 0.26}, {"t": 1778457612, "p": 0.26}, {"t": 1778461205, "p": 0.26}, {"t": 1778464821, "p": 0.26}, {"t": 1778468408, "p": 0.26}, {"t": 1778472006, "p": 0.26}, {"t": 1778475606, "p": 0.255}, {"t": 1778479208, "p": 0.255}, {"t": 1778482820, "p": 0.255}, {"t": 1778486406, "p": 0.255}, {"t": 1778490009, "p": 0.26}, {"t": 1778493605, "p": 0.26}, {"t": 1778497216, "p": 0.26}, {"t": 1778500812, "p": 0.255}, {"t": 1778504409, "p": 0.25}, {"t": 1778508006, "p": 0.25}, {"t": 1778511624, "p": 0.25}, {"t": 1778515207, "p": 0.25}, {"t": 1778518818, "p": 0.25}, {"t": 1778522415, "p": 0.25}, {"t": 1778526011, "p": 0.25}, {"t": 1778529610, "p": 0.25}, {"t": 1778533215, "p": 0.25}, {"t": 1778536813, "p": 0.25}, {"t": 1778540411, "p": 0.25}, {"t": 1778544017, "p": 0.25}, {"t": 1778547607, "p": 0.25}, {"t": 1778551208, "p": 0.25}, {"t": 1778554812, "p": 0.25}, {"t": 1778558406, "p": 0.25}, {"t": 1778562010, "p": 0.25}, {"t": 1778565613, "p": 0.255}, {"t": 1778569218, "p": 0.255}, {"t": 1778572810, "p": 0.255}, {"t": 1778576412, "p": 0.255}, {"t": 1778580006, "p": 0.255}, {"t": 1778583607, "p": 0.255}, {"t": 1778587212, "p": 0.255}, {"t": 1778590807, "p": 0.255}, {"t": 1778594409, "p": 0.255}, {"t": 1778598014, "p": 0.255}, {"t": 1778601607, "p": 0.255}, {"t": 1778605232, "p": 0.255}, {"t": 1778608811, "p": 0.255}, {"t": 1778612411, "p": 0.235}, {"t": 1778616012, "p": 0.23}, {"t": 1778619367, "p": 0.225}], "entry_ts": 1778617092, "entry_price": 0.31206336740241986, "entry_mid": 0.22, "direction": 1, "entry_z": -5.068030337996148}, "2170071": {"bars": [{"t": 1778446809, "p": 0.455}, {"t": 1778450406, "p": 0.47}, {"t": 1778454007, "p": 0.47}, {"t": 1778457610, "p": 0.44}, {"t": 1778461204, "p": 0.44}, {"t": 1778464820, "p": 0.44}, {"t": 1778468406, "p": 0.44}, {"t": 1778472005, "p": 0.44}, {"t": 1778475606, "p": 0.44}, {"t": 1778479207, "p": 0.44}, {"t": 1778482819, "p": 0.44}, {"t": 1778486405, "p": 0.44}, {"t": 1778490008, "p": 0.44}, {"t": 1778493604, "p": 0.44}, {"t": 1778497216, "p": 0.43}, {"t": 1778500810, "p": 0.43}, {"t": 1778504408, "p": 0.44}, {"t": 1778508005, "p": 0.44}, {"t": 1778511613, "p": 0.44}, {"t": 1778515206, "p": 0.44}, {"t": 1778518809, "p": 0.44}, {"t": 1778522411, "p": 0.45}, {"t": 1778526009, "p": 0.45}, {"t": 1778529607, "p": 0.45}, {"t": 1778533208, "p": 0.475}, {"t": 1778536808, "p": 0.475}, {"t": 1778540407, "p": 0.475}, {"t": 1778544010, "p": 0.5}, {"t": 1778547606, "p": 0.495}, {"t": 1778551206, "p": 0.5}, {"t": 1778554809, "p": 0.51}, {"t": 1778558406, "p": 0.51}, {"t": 1778562008, "p": 0.51}, {"t": 1778565609, "p": 0.485}, {"t": 1778569216, "p": 0.475}, {"t": 1778572808, "p": 0.475}, {"t": 1778576409, "p": 0.47}, {"t": 1778580004, "p": 0.455}, {"t": 1778583606, "p": 0.455}, {"t": 1778587208, "p": 0.445}, {"t": 1778590806, "p": 0.445}, {"t": 1778594407, "p": 0.445}, {"t": 1778598009, "p": 0.425}, {"t": 1778601606, "p": 0.425}, {"t": 1778605228, "p": 0.425}, {"t": 1778608808, "p": 0.425}, {"t": 1778612409, "p": 0.43}, {"t": 1778616009, "p": 0.415}, {"t": 1778619366, "p": 0.9995}], "entry_ts": 1778617092, "entry_price": 0.2952985649482183, "entry_mid": 0.265, "direction": 1, "entry_z": -6.605342985231809}, "2224752": {"bars": [{"t": 1778446811, "p": 0.5}, {"t": 1778450408, "p": 0.5}, {"t": 1778454010, "p": 0.5}, {"t": 1778457611, "p": 0.5}, {"t": 1778461204, "p": 0.5}, {"t": 1778464820, "p": 0.5}, {"t": 1778468407, "p": 0.5}, {"t": 1778472006, "p": 0.5}, {"t": 1778475606, "p": 0.5}, {"t": 1778479208, "p": 0.5}, {"t": 1778482819, "p": 0.5}, {"t": 1778486405, "p": 0.5}, {"t": 1778490009, "p": 0.5}, {"t": 1778493605, "p": 0.5}, {"t": 1778497216, "p": 0.5}, {"t": 1778500811, "p": 0.5}, {"t": 1778504409, "p": 0.5}, {"t": 1778508006, "p": 0.5}, {"t": 1778511617, "p": 0.5}, {"t": 1778515206, "p": 0.5}, {"t": 1778518817, "p": 0.5}, {"t": 1778522414, "p": 0.5}, {"t": 1778526011, "p": 0.5}, {"t": 1778529608, "p": 0.5}, {"t": 1778533212, "p": 0.5}, {"t": 1778536812, "p": 0.5}, {"t": 1778540408, "p": 0.5}, {"t": 1778544013, "p": 0.505}, {"t": 1778547606, "p": 0.505}, {"t": 1778551207, "p": 0.505}, {"t": 1778554811, "p": 0.505}, {"t": 1778558406, "p": 0.505}, {"t": 1778562009, "p": 0.505}, {"t": 1778565611, "p": 0.505}, {"t": 1778569216, "p": 0.505}, {"t": 1778572809, "p": 0.505}, {"t": 1778576410, "p": 0.505}, {"t": 1778580005, "p": 0.505}, {"t": 1778583607, "p": 0.505}, {"t": 1778587210, "p": 0.505}, {"t": 1778590807, "p": 0.505}, {"t": 1778594408, "p": 0.505}, {"t": 1778598012, "p": 0.505}, {"t": 1778601607, "p": 0.505}, {"t": 1778605230, "p": 0.505}, {"t": 1778608810, "p": 0.505}, {"t": 1778612410, "p": 0.505}, {"t": 1778616010, "p": 0.445}, {"t": 1778619367, "p": 0.014}], "entry_ts": 1778617093, "entry_price": 0.3884879116783901, "entry_mid": 0.305, "direction": 1, "entry_z": -16.442866155614237}, "2224769": {"bars": [{"t": 1778446809, "p": 0.5}, {"t": 1778450406, "p": 0.5}, {"t": 1778454007, "p": 0.5}, {"t": 1778457610, "p": 0.5}, {"t": 1778461204, "p": 0.5}, {"t": 1778464820, "p": 0.5}, {"t": 1778468406, "p": 0.5}, {"t": 1778472005, "p": 0.5}, {"t": 1778475606, "p": 0.5}, {"t": 1778479207, "p": 0.5}, {"t": 1778482819, "p": 0.5}, {"t": 1778486405, "p": 0.5}, {"t": 1778490007, "p": 0.5}, {"t": 1778493604, "p": 0.5}, {"t": 1778497216, "p": 0.5}, {"t": 1778500810, "p": 0.5}, {"t": 1778504408, "p": 0.5}, {"t": 1778508005, "p": 0.5}, {"t": 1778511613, "p": 0.5}, {"t": 1778515206, "p": 0.5}, {"t": 1778518809, "p": 0.5}, {"t": 1778522411, "p": 0.5}, {"t": 1778526008, "p": 0.5}, {"t": 1778529606, "p": 0.5}, {"t": 1778533207, "p": 0.5}, {"t": 1778536808, "p": 0.5}, {"t": 1778540407, "p": 0.5}, {"t": 1778544009, "p": 0.505}, {"t": 1778547606, "p": 0.505}, {"t": 1778551206, "p": 0.505}, {"t": 1778554809, "p": 0.505}, {"t": 1778558406, "p": 0.505}, {"t": 1778562008, "p": 0.505}, {"t": 1778565609, "p": 0.505}, {"t": 1778569216, "p": 0.505}, {"t": 1778572808, "p": 0.505}, {"t": 1778576409, "p": 0.505}, {"t": 1778580004, "p": 0.505}, {"t": 1778583606, "p": 0.505}, {"t": 1778587208, "p": 0.505}, {"t": 1778590806, "p": 0.505}, {"t": 1778594407, "p": 0.505}, {"t": 1778598009, "p": 0.505}, {"t": 1778601606, "p": 0.505}, {"t": 1778605227, "p": 0.505}, {"t": 1778608808, "p": 0.505}, {"t": 1778612409, "p": 0.505}, {"t": 1778616009, "p": 0.405}, {"t": 1778619366, "p": 0.435}], "entry_ts": 1778618023, "entry_price": 0.36, "entry_mid": 0.275, "direction": 1, "entry_z": -11.305280286384468}, "2234083": {"bars": [{"t": 1778533204, "p": 0.5}, {"t": 1778536804, "p": 0.5}, {"t": 1778540405, "p": 0.5}, {"t": 1778544004, "p": 0.5}, {"t": 1778547605, "p": 0.5}, {"t": 1778551204, "p": 0.5}, {"t": 1778554805, "p": 0.5}, {"t": 1778558405, "p": 0.5}, {"t": 1778562007, "p": 0.5}, {"t": 1778565606, "p": 0.5}, {"t": 1778569215, "p": 0.5}, {"t": 1778572806, "p": 0.5}, {"t": 1778576406, "p": 0.505}, {"t": 1778580004, "p": 0.505}, {"t": 1778583605, "p": 0.505}, {"t": 1778587205, "p": 0.505}, {"t": 1778590805, "p": 0.505}, {"t": 1778594406, "p": 0.505}, {"t": 1778598006, "p": 0.505}, {"t": 1778601604, "p": 0.505}, {"t": 1778605224, "p": 0.505}, {"t": 1778608805, "p": 0.505}, {"t": 1778612408, "p": 0.505}, {"t": 1778616008, "p": 0.445}, {"t": 1778619366, "p": 0.33}], "entry_ts": 1778618023, "entry_price": 0.44, "entry_mid": 0.395, "direction": 1, "entry_z": -8.954430086935636}};
+const POSITION_CHARTS = {"1908634": {"bars": [{"t": 1778572809, "p": 0.046}, {"t": 1778576410, "p": 0.046}, {"t": 1778580005, "p": 0.046}, {"t": 1778583607, "p": 0.046}, {"t": 1778587210, "p": 0.046}, {"t": 1778590806, "p": 0.046}, {"t": 1778594408, "p": 0.046}, {"t": 1778598012, "p": 0.046}, {"t": 1778601607, "p": 0.046}, {"t": 1778605229, "p": 0.046}, {"t": 1778608809, "p": 0.046}, {"t": 1778612410, "p": 0.078}, {"t": 1778616010, "p": 0.142}, {"t": 1778619609, "p": 0.123}, {"t": 1778619666, "p": 0.123}], "entry_ts": 1778613513, "entry_price": 0.05042590976651484, "entry_mid": 0.1185, "direction": -1, "entry_z": 10.392982697176059}, "2199384": {"bars": [{"t": 1778572811, "p": 0.875}, {"t": 1778576412, "p": 0.875}, {"t": 1778580006, "p": 0.885}, {"t": 1778583608, "p": 0.885}, {"t": 1778587213, "p": 0.895}, {"t": 1778590808, "p": 0.895}, {"t": 1778594409, "p": 0.895}, {"t": 1778598015, "p": 0.895}, {"t": 1778601608, "p": 0.895}, {"t": 1778605233, "p": 0.88}, {"t": 1778608812, "p": 0.885}, {"t": 1778612411, "p": 0.875}, {"t": 1778616013, "p": 0.9995}, {"t": 1778619612, "p": 0.9995}, {"t": 1778619667, "p": 0.9995}], "entry_ts": 1778613513, "entry_price": 0.36, "entry_mid": 0.335, "direction": 1, "entry_z": -50.37470032518685}, "665513": {"bars": [{"t": 1778572811, "p": 0.135}, {"t": 1778576412, "p": 0.135}, {"t": 1778580006, "p": 0.135}, {"t": 1778583608, "p": 0.145}, {"t": 1778587213, "p": 0.145}, {"t": 1778590808, "p": 0.145}, {"t": 1778594409, "p": 0.145}, {"t": 1778598015, "p": 0.145}, {"t": 1778601608, "p": 0.155}, {"t": 1778605234, "p": 0.155}, {"t": 1778608812, "p": 0.155}, {"t": 1778612411, "p": 0.155}, {"t": 1778616013, "p": 0.27}, {"t": 1778619613, "p": 0.205}, {"t": 1778619613, "p": 0.205}], "entry_ts": 1778614400, "entry_price": 0.15008735091550474, "entry_mid": 0.19, "direction": -1, "entry_z": 6.5016645400270265}, "1390343": {"bars": [{"t": 1778572806, "p": 0.595}, {"t": 1778576406, "p": 0.595}, {"t": 1778580004, "p": 0.595}, {"t": 1778583605, "p": 0.595}, {"t": 1778587205, "p": 0.605}, {"t": 1778590805, "p": 0.6}, {"t": 1778594406, "p": 0.6}, {"t": 1778598006, "p": 0.6}, {"t": 1778601605, "p": 0.605}, {"t": 1778605224, "p": 0.605}, {"t": 1778608805, "p": 0.605}, {"t": 1778612408, "p": 0.635}, {"t": 1778616008, "p": 0.49}, {"t": 1778619604, "p": 0.42}, {"t": 1778619666, "p": 0.42}], "entry_ts": 1778614400, "entry_price": 0.6165111911097199, "entry_mid": 0.535, "direction": 1, "entry_z": -5.0403039808518475}, "2224431": {"bars": [{"t": 1778572808, "p": 0.5}, {"t": 1778576409, "p": 0.5}, {"t": 1778580004, "p": 0.5}, {"t": 1778583606, "p": 0.5}, {"t": 1778587208, "p": 0.5}, {"t": 1778590806, "p": 0.5}, {"t": 1778594407, "p": 0.5}, {"t": 1778598009, "p": 0.5}, {"t": 1778601606, "p": 0.5}, {"t": 1778605227, "p": 0.5}, {"t": 1778608808, "p": 0.485}, {"t": 1778612409, "p": 0.475}, {"t": 1778616009, "p": 0.9995}, {"t": 1778619607, "p": 0.9995}, {"t": 1778619666, "p": 0.9995}], "entry_ts": 1778614400, "entry_price": 0.857725992503843, "entry_mid": 0.875, "direction": -1, "entry_z": 65.93097615704828}, "631120": {"bars": [{"t": 1778576412, "p": 0.255}, {"t": 1778580006, "p": 0.255}, {"t": 1778583607, "p": 0.255}, {"t": 1778587212, "p": 0.255}, {"t": 1778590807, "p": 0.255}, {"t": 1778594409, "p": 0.255}, {"t": 1778598014, "p": 0.255}, {"t": 1778601607, "p": 0.255}, {"t": 1778605232, "p": 0.255}, {"t": 1778608811, "p": 0.255}, {"t": 1778612411, "p": 0.235}, {"t": 1778616012, "p": 0.23}, {"t": 1778619611, "p": 0.22}, {"t": 1778619666, "p": 0.22}], "entry_ts": 1778617092, "entry_price": 0.31206336740241986, "entry_mid": 0.22, "direction": 1, "entry_z": -5.068030337996148}, "2170071": {"bars": [{"t": 1778576409, "p": 0.47}, {"t": 1778580004, "p": 0.455}, {"t": 1778583606, "p": 0.455}, {"t": 1778587208, "p": 0.445}, {"t": 1778590806, "p": 0.445}, {"t": 1778594407, "p": 0.445}, {"t": 1778598009, "p": 0.425}, {"t": 1778601606, "p": 0.425}, {"t": 1778605228, "p": 0.425}, {"t": 1778608808, "p": 0.425}, {"t": 1778612409, "p": 0.43}, {"t": 1778616009, "p": 0.415}, {"t": 1778619607, "p": 0.9995}, {"t": 1778619666, "p": 0.9995}], "entry_ts": 1778617092, "entry_price": 0.2952985649482183, "entry_mid": 0.265, "direction": 1, "entry_z": -6.605342985231809}, "2224752": {"bars": [{"t": 1778576410, "p": 0.505}, {"t": 1778580005, "p": 0.505}, {"t": 1778583607, "p": 0.505}, {"t": 1778587210, "p": 0.505}, {"t": 1778590807, "p": 0.505}, {"t": 1778594408, "p": 0.505}, {"t": 1778598012, "p": 0.505}, {"t": 1778601607, "p": 0.505}, {"t": 1778605230, "p": 0.505}, {"t": 1778608810, "p": 0.505}, {"t": 1778612410, "p": 0.505}, {"t": 1778616010, "p": 0.445}, {"t": 1778619609, "p": 0.0005}, {"t": 1778619666, "p": 0.0005}], "entry_ts": 1778617093, "entry_price": 0.3884879116783901, "entry_mid": 0.305, "direction": 1, "entry_z": -16.442866155614237}, "2224769": {"bars": [{"t": 1778576409, "p": 0.505}, {"t": 1778580004, "p": 0.505}, {"t": 1778583606, "p": 0.505}, {"t": 1778587208, "p": 0.505}, {"t": 1778590806, "p": 0.505}, {"t": 1778594407, "p": 0.505}, {"t": 1778598009, "p": 0.505}, {"t": 1778601606, "p": 0.505}, {"t": 1778605227, "p": 0.505}, {"t": 1778608808, "p": 0.505}, {"t": 1778612409, "p": 0.505}, {"t": 1778616009, "p": 0.405}, {"t": 1778619607, "p": 0.005}, {"t": 1778619666, "p": 0.005}], "entry_ts": 1778618023, "entry_price": 0.36, "entry_mid": 0.275, "direction": 1, "entry_z": -11.305280286384468}, "2234083": {"bars": [{"t": 1778576406, "p": 0.505}, {"t": 1778580004, "p": 0.505}, {"t": 1778583605, "p": 0.505}, {"t": 1778587205, "p": 0.505}, {"t": 1778590805, "p": 0.505}, {"t": 1778594406, "p": 0.505}, {"t": 1778598006, "p": 0.505}, {"t": 1778601604, "p": 0.505}, {"t": 1778605224, "p": 0.505}, {"t": 1778608805, "p": 0.505}, {"t": 1778612408, "p": 0.505}, {"t": 1778616008, "p": 0.445}, {"t": 1778619604, "p": 0.31}, {"t": 1778619666, "p": 0.325}], "entry_ts": 1778618023, "entry_price": 0.44, "entry_mid": 0.395, "direction": 1, "entry_z": -8.954430086935636}};
 
 Object.keys(POSITION_CHARTS).forEach(mid => {
     const data = POSITION_CHARTS[mid];
@@ -903,6 +933,51 @@ Object.keys(POSITION_CHARTS).forEach(mid => {
                     titleColor: DARK.text, bodyColor: DARK.text, padding: 8,
                     filter: (ctx) => ctx.datasetIndex === 0,
                 },
+            },
+            scales: {
+                x: { ticks: { maxTicksLimit: 6, font: { size: 9 } } },
+                y: { ticks: { font: { size: 9 }, callback: (v) => v.toFixed(2) } },
+            },
+        }
+    });
+});
+
+// ── Per-CLOSED-position charts with entry+exit markers ──
+const CLOSED_CHARTS = [{"id": "closedchart_1390422_1778618021", "bars": [{"t": 1778572808, "p": 0.12}, {"t": 1778576409, "p": 0.12}, {"t": 1778580004, "p": 0.12}, {"t": 1778583606, "p": 0.12}, {"t": 1778587208, "p": 0.12}, {"t": 1778590806, "p": 0.12}, {"t": 1778594407, "p": 0.12}, {"t": 1778598009, "p": 0.12}, {"t": 1778601606, "p": 0.12}, {"t": 1778605228, "p": 0.125}, {"t": 1778608808, "p": 0.125}, {"t": 1778612409, "p": 0.16}, {"t": 1778616009, "p": 0.19}, {"t": 1778619607, "p": 0.135}, {"t": 1778619666, "p": 0.135}], "entry_ts": 1778615279, "exit_ts": 1778618021, "entry_price": 0.09790131802624148, "exit_price": 0.18790734548270824, "entry_mid": 0.17, "exit_mid": 0.13, "direction": -1, "pnl": -11.739515691049355}];
+CLOSED_CHARTS.forEach(d => {
+    const el = document.getElementById(d.id);
+    if (!el || !d.bars || d.bars.length < 2) return;
+    const labels = d.bars.map(b => {
+        const date = new Date(b.t * 1000);
+        return (date.getUTCMonth()+1) + '-' + String(date.getUTCDate()).padStart(2,'0') + ' ' + String(date.getUTCHours()).padStart(2,'0') + ':00';
+    });
+    const prices = d.bars.map(b => b.p);
+    let entryIdx = 0, exitIdx = d.bars.length - 1;
+    for (let i = 0; i < d.bars.length; i++) {
+        if (d.bars[i].t >= d.entry_ts) { entryIdx = i; break; }
+    }
+    for (let i = 0; i < d.bars.length; i++) {
+        if (d.bars[i].t >= d.exit_ts) { exitIdx = i; break; }
+    }
+    const isLong = d.direction === 1;
+    const pnlColor = d.pnl > 0 ? DARK.green : d.pnl < 0 ? DARK.red : DARK.textMute;
+    const entryMarker = prices.map((_, i) => i === entryIdx ? d.entry_mid : null);
+    const exitMarker = prices.map((_, i) => i === exitIdx ? d.exit_mid : null);
+    new Chart(el, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                { data: prices, borderColor: DARK.blue, backgroundColor: DARK.blue + '15', fill: false, pointRadius: 0, borderWidth: 1.5 },
+                { data: entryMarker, borderColor: DARK.textDim, backgroundColor: DARK.textDim, pointRadius: 6, pointStyle: 'triangle', showLine: false },
+                { data: exitMarker, borderColor: pnlColor, backgroundColor: pnlColor, pointRadius: 6, pointStyle: 'rectRot', showLine: false },
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { mode: 'index', intersect: false, backgroundColor: '#0a0e14', borderColor: DARK.border, borderWidth: 1, padding: 8, filter: (ctx) => ctx.datasetIndex === 0 },
             },
             scales: {
                 x: { ticks: { maxTicksLimit: 6, font: { size: 9 } } },

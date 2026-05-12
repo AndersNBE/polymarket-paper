@@ -362,7 +362,7 @@ def color_for(v):
     if v < 0: return "#f85149"
     return "#7d8590"
 
-# ── Fetch live price-history for each open position (for trajectory chart) ──
+# ── Fetch live price-history for each open + recent closed position ──
 CLOB = "https://clob.polymarket.com"
 
 def fetch_position_history(yes_token):
@@ -376,7 +376,8 @@ def fetch_position_history(yes_token):
         pass
     return None
 
-position_charts = {}   # market_id -> {"bars": [{t, p}], "entry_ts": ..., "entry_price": ..., "direction": ...}
+# Open positions — zoom: 12h before entry to now+6h
+position_charts = {}
 for mid, pos in open_positions.items():
     tok = pos.get("yes_token_id")
     if not tok: continue
@@ -384,12 +385,12 @@ for mid, pos in open_positions.items():
     time.sleep(0.05)
     if not hist:
         continue
-    # Keep only bars within ±48h of entry (focused window)
     entry_ts = pos.get("entry_ts", 0)
-    window_start = entry_ts - 48 * 3600
-    window_end = entry_ts + 96 * 3600
+    # Zoom: 12h before entry to current time + small buffer
+    window_start = entry_ts - 12 * 3600
+    window_end = now_ts + 3 * 3600   # current time + 3h buffer
     bars = [{"t": h["t"], "p": h["p"]} for h in hist if window_start <= h["t"] <= window_end]
-    if len(bars) < 5: continue
+    if len(bars) < 3: continue
     position_charts[mid] = {
         "bars": bars,
         "entry_ts": entry_ts,
@@ -398,6 +399,28 @@ for mid, pos in open_positions.items():
         "direction": pos.get("direction"),
         "entry_z": pos.get("entry_z"),
     }
+
+# Closed positions — last 6, show entry → exit window
+recent_closed_with_charts = []
+for t in sorted(closed, key=lambda x: x.get("exit_ts", 0), reverse=True)[:6]:
+    tok = t.get("yes_token_id")
+    if not tok:
+        continue
+    hist = fetch_position_history(tok)
+    time.sleep(0.05)
+    if not hist:
+        continue
+    entry_ts = t.get("entry_ts", 0)
+    exit_ts = t.get("exit_ts", entry_ts)
+    # 12h before entry to 12h after exit
+    window_start = entry_ts - 12 * 3600
+    window_end = exit_ts + 12 * 3600
+    bars = [{"t": h["t"], "p": h["p"]} for h in hist if window_start <= h["t"] <= window_end]
+    if len(bars) < 3: continue
+    recent_closed_with_charts.append({
+        "trade": t,
+        "bars": bars,
+    })
 
 # ── Build position cards (instead of table) ─────────────────────
 position_cards = ""
@@ -523,6 +546,60 @@ for t in sorted(closed, key=lambda x: x.get("exit_ts", 0), reverse=True)[:30]:
         </tr>"""
 if not recent_trade_rows:
     recent_trade_rows = '<tr><td colspan="12" class="empty-state-small">No closed trades yet · z≥5 spikes typically revert in 12-48h</td></tr>'
+
+# Build closed-position cards with charts
+def _exit_reason_explanation(reason):
+    return {
+        "z_revert": "z reverted below 0.5σ — mean reversion completed",
+        "max_hold": "max 48h hold reached — exited at last price",
+        "stop_z_intensify": "stop-loss: signal continued moving away from mean",
+        "stop_price_adverse": "stop-loss: price moved >15¢ against us",
+        "market_resolved": "market resolved before exit signal",
+    }.get(reason, reason)
+
+def _render_closed_card(c):
+    t = c["trade"]
+    pnl = t.get("net_pnl_usd", 0)
+    pnl_color = "#3fb950" if pnl > 0 else "#f85149" if pnl < 0 else "#7d8590"
+    entry_p = t.get("entry_exec_price", 0)
+    exit_p = t.get("exit_exec_price", 0)
+    direction = t.get("direction")
+    dir_label = "SHORT" if direction == -1 else "LONG"
+    dir_color = "#f85149" if direction == -1 else "#3fb950"
+    held = t.get("hold_hours", 0)
+    reason = t.get("exit_reason", "—")
+    clv = t.get("clv_value")
+    clv_text = f"{clv*100:+.2f}¢" if clv is not None else "—"
+    explanation = _exit_reason_explanation(reason)
+    return f"""
+    <div class="pos-card closed-card">
+        <div class="pos-card-top">
+            <div class="pos-question">{escape(str(t.get('question',''))[:80])}</div>
+            <div class="pos-pnl" style="color:{pnl_color};font-weight:600;font-size:15px">${pnl:+.2f}</div>
+        </div>
+        <div class="pos-stats">
+            <div class="pos-stat"><span class="pos-stat-label">z entry</span><span class="pos-stat-val">{t.get('entry_z', 0):+.2f}σ</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Dir</span><span class="pos-stat-val" style="color:{dir_color}">{dir_label}</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Px in→out</span><span class="pos-stat-val">{entry_p:.3f}→{exit_p:.3f}</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">{held:.1f}h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val">{clv_text}</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Fees</span><span class="pos-stat-val">${t.get('total_fees_usd', 0):.2f}</span></div>
+        </div>
+        <div class="exit-reason">Exit: <strong>{reason}</strong> — {explanation}</div>
+        <div class="pos-chart-wrap"><canvas class="pos-chart" id="closedchart_{t.get('market_id')}_{int(t.get('exit_ts',0))}" width="600" height="120"></canvas></div>
+    </div>"""
+
+closed_charts_html = ""
+if recent_closed_with_charts:
+    cards_inner = ''.join(_render_closed_card(c) for c in recent_closed_with_charts)
+    closed_charts_html = f'''
+    <div class="card" style="margin-bottom:14px">
+        <div class="card-title">
+            <div class="card-title-row">📜 Recently closed (with trajectory + exit reason)</div>
+            <span style="color:var(--text-mute);font-size:11px">last {len(recent_closed_with_charts)}</span>
+        </div>
+        {cards_inner}
+    </div>'''
 
 cat_rows = ""
 for cat in sorted(by_cat.keys(), key=lambda k: -len(by_cat[k])):
@@ -712,6 +789,10 @@ html = f"""<!DOCTYPE html>
   /* Position chart per open position */
   .pos-chart-wrap {{ position: relative; height: 120px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }}
   .pos-chart {{ width: 100% !important; height: 110px !important; max-height: 110px; display: block; }}
+  .closed-card {{ background: var(--surface); }}
+  .closed-card .pos-card-top {{ align-items: center; }}
+  .exit-reason {{ font-size: 11px; color: var(--text-dim); margin-top: 10px; padding: 6px 10px; background: var(--surface-2); border-radius: 6px; border-left: 2px solid var(--text-mute); }}
+  .exit-reason strong {{ color: var(--text); }}
 
   /* Animated numbers — initial fade in */
   .animated-num {{ animation: fadeUp 0.6s ease-out; }}
@@ -783,7 +864,7 @@ html = f"""<!DOCTYPE html>
     <div class="hero-cell">
       <div class="hero-label">Open Positions</div>
       <div class="hero-value mono">{n_open}<span style="font-size:18px;color:var(--text-dim)">/10</span></div>
-      <div class="hero-sub">${total_deployed:.0f} deployed of ${BANKROLL_USD}</div>
+      <div class="hero-sub">${total_deployed:.0f} deployed{(' ⚠ exceeds $' + str(BANKROLL_USD) + ' bankroll (legacy $100 stakes)') if total_deployed > BANKROLL_USD else (' of $' + str(BANKROLL_USD))}</div>
       <div class="sparkline-wrap"><canvas class="sparkline" id="spark_pos" width="200" height="30"></canvas></div>
     </div>
   </div>
@@ -939,6 +1020,9 @@ html = f"""<!DOCTYPE html>
     </div>
     {position_cards}
   </div>
+
+  <!-- RECENTLY CLOSED POSITIONS WITH CHARTS -->
+  {closed_charts_html}
 
   <!-- BOT HEALTH + LIFETIME STATS -->
   <div class="row-2-1">
@@ -1196,6 +1280,64 @@ Object.keys(POSITION_CHARTS).forEach(mid => {{
                     titleColor: DARK.text, bodyColor: DARK.text, padding: 8,
                     filter: (ctx) => ctx.datasetIndex === 0,
                 }},
+            }},
+            scales: {{
+                x: {{ ticks: {{ maxTicksLimit: 6, font: {{ size: 9 }} }} }},
+                y: {{ ticks: {{ font: {{ size: 9 }}, callback: (v) => v.toFixed(2) }} }},
+            }},
+        }}
+    }});
+}});
+
+// ── Per-CLOSED-position charts with entry+exit markers ──
+const CLOSED_CHARTS = {json.dumps([
+    {
+        "id": f'closedchart_{c["trade"].get("market_id")}_{int(c["trade"].get("exit_ts", 0))}',
+        "bars": c["bars"],
+        "entry_ts": c["trade"].get("entry_ts"),
+        "exit_ts": c["trade"].get("exit_ts"),
+        "entry_price": c["trade"].get("entry_exec_price"),
+        "exit_price": c["trade"].get("exit_exec_price"),
+        "entry_mid": c["trade"].get("entry_price_mid"),
+        "exit_mid": c["trade"].get("exit_price_mid"),
+        "direction": c["trade"].get("direction"),
+        "pnl": c["trade"].get("net_pnl_usd", 0),
+    } for c in recent_closed_with_charts
+], default=str)};
+CLOSED_CHARTS.forEach(d => {{
+    const el = document.getElementById(d.id);
+    if (!el || !d.bars || d.bars.length < 2) return;
+    const labels = d.bars.map(b => {{
+        const date = new Date(b.t * 1000);
+        return (date.getUTCMonth()+1) + '-' + String(date.getUTCDate()).padStart(2,'0') + ' ' + String(date.getUTCHours()).padStart(2,'0') + ':00';
+    }});
+    const prices = d.bars.map(b => b.p);
+    let entryIdx = 0, exitIdx = d.bars.length - 1;
+    for (let i = 0; i < d.bars.length; i++) {{
+        if (d.bars[i].t >= d.entry_ts) {{ entryIdx = i; break; }}
+    }}
+    for (let i = 0; i < d.bars.length; i++) {{
+        if (d.bars[i].t >= d.exit_ts) {{ exitIdx = i; break; }}
+    }}
+    const isLong = d.direction === 1;
+    const pnlColor = d.pnl > 0 ? DARK.green : d.pnl < 0 ? DARK.red : DARK.textMute;
+    const entryMarker = prices.map((_, i) => i === entryIdx ? d.entry_mid : null);
+    const exitMarker = prices.map((_, i) => i === exitIdx ? d.exit_mid : null);
+    new Chart(el, {{
+        type: 'line',
+        data: {{
+            labels: labels,
+            datasets: [
+                {{ data: prices, borderColor: DARK.blue, backgroundColor: DARK.blue + '15', fill: false, pointRadius: 0, borderWidth: 1.5 }},
+                {{ data: entryMarker, borderColor: DARK.textDim, backgroundColor: DARK.textDim, pointRadius: 6, pointStyle: 'triangle', showLine: false }},
+                {{ data: exitMarker, borderColor: pnlColor, backgroundColor: pnlColor, pointRadius: 6, pointStyle: 'rectRot', showLine: false }},
+            ]
+        }},
+        options: {{
+            responsive: true, maintainAspectRatio: false,
+            plugins: {{
+                legend: {{ display: false }},
+                tooltip: {{ mode: 'index', intersect: false, backgroundColor: '#0a0e14', borderColor: DARK.border, borderWidth: 1, padding: 8, filter: (ctx) => ctx.datasetIndex === 0 }},
             }},
             scales: {{
                 x: {{ ticks: {{ maxTicksLimit: 6, font: {{ size: 9 }} }} }},
