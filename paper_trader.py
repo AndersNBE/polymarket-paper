@@ -40,14 +40,28 @@ import requests
 # CONFIG
 # ────────────────────────────────────────────────────────────────────────
 HERE = Path(__file__).parent
-STATE = HERE / "paper_state.json"
-TRADE_LOG = HERE / "paper_trades.jsonl"
-SIGNAL_LOG = HERE / "paper_signals.jsonl"
-DAILY_LOG = HERE / "paper_daily.csv"
+
+# Version is set via --version flag (v1 = current/baseline, v2 = improved)
+# Default is v1 for backward compatibility.
+VERSION = "v1"
+for _a in sys.argv:
+    if _a.startswith("--version="):
+        VERSION = _a.split("=", 1)[1]
+    elif _a == "--version" and sys.argv.index(_a) + 1 < len(sys.argv):
+        VERSION = sys.argv[sys.argv.index(_a) + 1]
+if "--v2" in sys.argv: VERSION = "v2"
+assert VERSION in ("v1", "v2"), f"Unknown version: {VERSION}"
+
+_suffix = "" if VERSION == "v1" else "_" + VERSION
+STATE = HERE / f"paper_state{_suffix}.json"
+TRADE_LOG = HERE / f"paper_trades{_suffix}.jsonl"
+SIGNAL_LOG = HERE / f"paper_signals{_suffix}.jsonl"
+DAILY_LOG = HERE / f"paper_daily{_suffix}.csv"
 
 GAMMA = "https://gamma-api.polymarket.com"
 CLOB = "https://clob.polymarket.com"
 
+# Base CFG; per-version overrides applied below
 CFG = {
     "poll_interval_sec": 15 * 60,
     "universe_refresh_sec": 6 * 3600,
@@ -58,7 +72,7 @@ CFG = {
     "min_v24": 50,
     "max_v24": 10000,
     "min_v1mo": 2000,
-    # signal filters
+    # signal filters — V1 defaults
     "rolling_window": 24,    # bars
     "entry_z": 5.0,
     "exit_z": 0.5,
@@ -68,6 +82,7 @@ CFG = {
     "dte_max": 365,
     "dte_block_lo": 7,       # block trades with this many days to end
     "dte_block_hi": 30,
+    "direction_filter": None,   # None = both; "short" = only z>0; "long" = only z<0
     # execution model
     "trade_size_usd": 100.0,
     "fee_rates": {
@@ -95,6 +110,12 @@ CFG = {
     # scan limit per cycle (0 = no limit)
     "scan_limit": 0,
 }
+
+# V2 strategy overrides (improved version from strategy_improvements.py)
+if VERSION == "v2":
+    CFG["entry_z"] = 7.0          # was 5.0
+    CFG["max_hold_hours"] = 12    # was 48
+    CFG["direction_filter"] = "short"   # only short YES (z>0)
 
 # ────────────────────────────────────────────────────────────────────────
 # UTILITIES
@@ -362,7 +383,8 @@ def simulate_exit(position, market, reason, exit_price_mid):
 def run_cycle(state):
     state["cycle"] += 1
     cycle_no = state["cycle"]
-    print(f"\n========== CYCLE #{cycle_no} @ {now_iso()} ==========")
+    print(f"\n========== CYCLE #{cycle_no} [{VERSION.upper()}] @ {now_iso()} ==========")
+    print(f"   strategy: entry_z>={CFG['entry_z']}, max_hold={CFG['max_hold_hours']}h, dir={CFG.get('direction_filter') or 'both'}")
 
     # Refresh universe if stale
     if now_ts() - state["universe_ts"] > CFG["universe_refresh_sec"]:
@@ -480,6 +502,11 @@ def run_cycle(state):
                 continue
             # Direction: mean-revert (short if z>0, long if z<0)
             direction = -1 if sig["z"] > 0 else 1
+            # Apply direction filter (v2 strategy = short only)
+            if CFG.get("direction_filter") == "short" and direction != -1:
+                continue
+            if CFG.get("direction_filter") == "long" and direction != 1:
+                continue
             pos = simulate_entry(market, direction, sig)
             if pos is None:
                 continue

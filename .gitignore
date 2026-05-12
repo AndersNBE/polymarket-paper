@@ -1,7 +1,10 @@
 __pycache__/
 *.pyc
 markets.json
+resolved_markets.json
 paper_test_run.log
+extended_backtest.log
+extended_progress.json
 results_*.json
 spread_sample.json
 blindspot_results.json
