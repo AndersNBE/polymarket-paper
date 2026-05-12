@@ -34,29 +34,19 @@ jobs:
       - name: Install deps
         run: pip install -r requirements.txt
 
-      - name: Run V1 cycle (baseline, z>=5, 48h hold, both directions)
+      - name: Run V1 cycle (z>=5, 48h hold, both directions)
         run: python3 -u paper_trader.py --version v1 --single
-
-      - name: Run V2 cycle (improved, z>=7, 12h hold, short only)
-        if: always()
-        run: python3 -u paper_trader.py --version v2 --single
 
       - name: Print status summary
         if: always()
-        run: |
-          echo "--- V1 status ---"
-          python3 paper_trader.py --version v1 --status || true
-          echo ""
-          echo "--- V2 status ---"
-          python3 paper_trader.py --version v2 --status || true
+        run: python3 paper_trader.py --version v1 --status || true
 
       - name: Commit state changes
         if: always()
         run: |
           git config user.name "paper-trader-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add -f paper_state.json paper_trades.jsonl paper_signals.jsonl \
-                    paper_state_v2.json paper_trades_v2.jsonl paper_signals_v2.jsonl 2>/dev/null || true
+          git add -f paper_state.json paper_trades.jsonl paper_signals.jsonl 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No state changes this cycle"
           else
