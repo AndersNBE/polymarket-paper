@@ -48,21 +48,38 @@ jobs:
       - name: Commit state + dashboard
         if: always()
         run: |
+          set -x  # echo every command for full visibility
           git config user.name "paper-trader-bot"
           git config user.email "bot@users.noreply.github.com"
-          echo "── files in workdir ──"
-          ls -la paper_state*.json paper_trades*.jsonl paper_signals*.jsonl paper_cycles*.jsonl dashboard.html 2>&1 || true
-          echo "── git status before add ──"
+          echo "=========================================="
+          echo "Files present in workdir:"
+          ls -la paper_state*.json paper_trades*.jsonl paper_signals*.jsonl paper_cycles*.jsonl dashboard.html 2>&1 || echo "NO MATCH"
+          echo "=========================================="
+          echo "Repo working tree state:"
+          git status
+          echo "=========================================="
+          # Add WHATEVER exists from our list, individually so we see failures
+          for f in paper_state.json paper_trades.jsonl paper_signals.jsonl paper_cycles.jsonl dashboard.html; do
+            if [ -f "$f" ]; then
+              git add -f "$f" && echo "Added: $f"
+            else
+              echo "Missing: $f"
+            fi
+          done
+          echo "=========================================="
+          echo "git status after adds:"
+          git status
+          echo "=========================================="
+          # Always create a tiny heartbeat to prove pipeline works
+          date -u +%Y-%m-%dT%H:%MZ > .heartbeat
+          git add -f .heartbeat
+          echo "Heartbeat added. Final status:"
           git status --short
-          git add -f paper_state.json paper_trades.jsonl paper_signals.jsonl paper_cycles.jsonl dashboard.html 2>&1 || echo "(add failed)"
-          echo "── git status after add ──"
-          git status --short
-          echo "── git diff --staged --quiet ──"
+          echo "=========================================="
           if git diff --staged --quiet; then
-            echo "RESULT: No staged changes this cycle"
+            echo "FAIL: No staged changes despite heartbeat!"
           else
-            echo "RESULT: Staging changes, committing..."
             git commit -m "cycle $(date -u +%Y-%m-%dT%H:%MZ)"
             git pull --rebase origin main || true
-            git push origin main || true
+            git push origin main || echo "PUSH FAILED"
           fi
