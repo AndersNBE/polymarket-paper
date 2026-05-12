@@ -89,7 +89,7 @@ CFG = {
     # require both sides quoted with at least this many tick widths
     "max_spread_for_entry": 0.05,   # don't enter if spread > 5¢
     # rate limiting
-    "api_delay_sec": 0.08,
+    "api_delay_sec": 0.04,
     # price-history cache: hourly bars only update once an hour, so cache aggressively
     "history_cache_sec": 50 * 60,
     # scan limit per cycle (0 = no limit)
