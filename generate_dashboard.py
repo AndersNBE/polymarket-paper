@@ -21,12 +21,15 @@ SIGNALS_FILE = HERE / "paper_signals.jsonl"
 CYCLES_FILE = HERE / "paper_cycles.jsonl"
 OUT = HERE / "dashboard.html"
 
-# Backtest expectations (from extended_v3)
-EXP_AVG_TRADE = 7.66
-EXP_WIN_RATE = 54.3
-EXP_STD = 70.79
-EXP_CLV = 2.42       # cents per share, our gold metric
-EXP_TRADES_PER_DAY = 3.0
+# Backtest expectations — V1 strategy on low-vol universe WITH max_slippage_for_entry=2¢
+# (analyze_slippage_filter.py v1, n=27 trades over 621 days from extended_trades_v3.jsonl).
+# Old numbers (7.66/54.3/70.79/2.42/3.0) assumed zero spread cost — unrealistic.
+# Values are per $100 stake; dashboard scales by STAKE/100.
+EXP_AVG_TRADE = 0.6
+EXP_WIN_RATE = 56.0
+EXP_STD = 55.0
+EXP_CLV = 0.5       # cents per share — modest expectation under 2¢ slippage filter
+EXP_TRADES_PER_DAY = 1.5
 BANKROLL_USD = 720
 STAKE = 30
 
