@@ -426,7 +426,8 @@ for it in activity_items:
     dt_str = datetime.datetime.fromtimestamp(it["ts"], datetime.timezone.utc).strftime("%m-%d %H:%M")
     icon = {"close": "✗", "open": "▲", "cycle": "↻"}[it["type"]]
     color = {"close": "#a371f7", "open": "#58a6ff", "cycle": "#7d8590"}[it["type"]]
-    activity_html += f'<div class="activity-row"><span class="activity-time">{dt_str}</span><span class="activity-icon" style="color:{color}">{icon}</span><span class="activity-text">{it["label"]}</span></div>'
+    # Use title attr for full text on hover
+    activity_html += f'<div class="activity-row"><span class="activity-time">{dt_str}</span><span class="activity-icon" style="color:{color}">{icon}</span><span class="activity-text" title="{escape(it["label"])}">{it["label"]}</span></div>'
 if not activity_html:
     activity_html = '<div class="empty-state-small">No activity yet · waiting for first cycle</div>'
 
@@ -604,11 +605,11 @@ html = f"""<!DOCTYPE html>
   .pos-stat-val {{ font-size: 13px; font-weight: 500; font-family: "SF Mono", "Menlo", monospace; margin-top: 2px; }}
 
   /* Activity feed */
-  .activity-row {{ display: grid; grid-template-columns: 80px 24px 1fr; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }}
+  .activity-row {{ display: grid; grid-template-columns: 80px 24px 1fr; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; gap: 8px; }}
   .activity-row:last-child {{ border-bottom: none; }}
   .activity-time {{ color: var(--text-mute); font-family: "SF Mono", "Menlo", monospace; font-size: 11px; }}
   .activity-icon {{ text-align: center; font-weight: bold; }}
-  .activity-text {{ color: var(--text); }}
+  .activity-text {{ color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }}
 
   /* Stat detail bar */
   .stat-bar {{ display: flex; gap: 18px; font-size: 12px; color: var(--text-dim); margin-top: 8px; }}
@@ -718,7 +719,7 @@ html = f"""<!DOCTYPE html>
     <div class="hero-cell hero-cell-primary">
       <div class="hero-label">Net PnL</div>
       <div class="hero-value mono animated-num" data-target="{total_pnl}" data-prefix="$" data-prec="2" style="color:{color_for(total_pnl)}">${total_pnl:+.2f}</div>
-      <div class="hero-sub">{n_closed} trades · ${total_fees:.2f} fees paid · ${'+' if total_pnl-total_fees > 0 else ''}${total_pnl + total_fees:.2f} before fees</div>
+      <div class="hero-sub">{n_closed} trades · ${total_fees:.2f} fees paid · ${total_pnl + total_fees:+.2f} before fees</div>
       <div class="sparkline-wrap"><canvas class="sparkline" id="spark_equity" width="200" height="30"></canvas></div>
     </div>
     <div class="hero-cell">

@@ -100,11 +100,11 @@
   .pos-stat-val { font-size: 13px; font-weight: 500; font-family: "SF Mono", "Menlo", monospace; margin-top: 2px; }
 
   /* Activity feed */
-  .activity-row { display: grid; grid-template-columns: 80px 24px 1fr; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .activity-row { display: grid; grid-template-columns: 80px 24px 1fr; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; gap: 8px; }
   .activity-row:last-child { border-bottom: none; }
   .activity-time { color: var(--text-mute); font-family: "SF Mono", "Menlo", monospace; font-size: 11px; }
   .activity-icon { text-align: center; font-weight: bold; }
-  .activity-text { color: var(--text); }
+  .activity-text { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
 
   /* Stat detail bar */
   .stat-bar { display: flex; gap: 18px; font-size: 12px; color: var(--text-dim); margin-top: 8px; }
@@ -189,14 +189,14 @@
       <div class="logo-mark">P</div>
       <div class="logo-text">
         <h1>Polymarket Paper Trader</h1>
-        <div class="sub">2026-05-12 20:48:00 UTC · Cycle #8 · Started 2026-05-12</div>
+        <div class="sub">2026-05-12 20:52:03 UTC · Cycle #8 · Started 2026-05-12</div>
       </div>
     </div>
     <div class="live-pill">
       <span class="live-dot"></span>
       <span style="color:#3fb950;font-weight:600">LIVE</span>
       <span style="color:var(--text-mute)">·</span>
-      <span style="color:var(--text-dim)">0m ago</span>
+      <span style="color:var(--text-dim)">4m ago</span>
     </div>
   </header>
 
@@ -214,7 +214,7 @@
     <div class="hero-cell hero-cell-primary">
       <div class="hero-label">Net PnL</div>
       <div class="hero-value mono animated-num" data-target="-11.739515691049355" data-prefix="$" data-prec="2" style="color:#f85149">$-11.74</div>
-      <div class="hero-sub">1 trades · $1.65 fees paid · $$-10.09 before fees</div>
+      <div class="hero-sub">1 trades · $1.65 fees paid · $-10.09 before fees</div>
       <div class="sparkline-wrap"><canvas class="sparkline" id="spark_equity" width="200" height="30"></canvas></div>
     </div>
     <div class="hero-cell">
@@ -336,7 +336,7 @@
     <div class="card">
       <div class="card-title">⚡ Activity feed</div>
       <div style="max-height:380px;overflow-y:auto">
-        <div class="activity-row"><span class="activity-time">05-12 20:33</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text">Opened long Ethereum Up or Down - May 12, 4PM ET at z=-11.31</span></div><div class="activity-row"><span class="activity-time">05-12 20:33</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text">Opened long Bitcoin Up or Down - May 12, 4:00PM-8:00PM ET at z=-8.95</span></div><div class="activity-row"><span class="activity-time">05-12 20:33</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text">Scan #7: 3,042 markets, 35 signals, 2 opened, 1 closed</span></div><div class="activity-row"><span class="activity-time">05-12 20:33</span><span class="activity-icon" style="color:#a371f7">✗</span><span class="activity-text">Closed short Will Lithuania be in the top 10 at Eurovision 2026 → <span style="color:#f85149">$-11.74</span> (z_revert)</span></div><div class="activity-row"><span class="activity-time">05-12 20:18</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text">Opened long Bitcoin Up or Down - May 12, 4PM ET at z=-16.44</span></div><div class="activity-row"><span class="activity-time">05-12 20:18</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text">Scan #6: 3,164 markets, 31 signals, 3 opened, 0 closed</span></div><div class="activity-row"><span class="activity-time">05-12 20:18</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text">Opened long Will Google have the top AI model at the end of Ju at z=-5.07</span></div><div class="activity-row"><span class="activity-time">05-12 20:18</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text">Opened long LoL: paiN Gaming Academy vs 7REX - Game 1 Winner at z=-6.61</span></div><div class="activity-row"><span class="activity-time">05-12 20:03</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text">Scan #5: 3,186 markets, 7 signals, 0 opened, 0 closed</span></div><div class="activity-row"><span class="activity-time">05-12 19:47</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text">Opened short Will Lithuania be in the top 10 at Eurovision 2026 at z=+5.94</span></div><div class="activity-row"><span class="activity-time">05-12 19:47</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text">Scan #4: 3,176 markets, 29 signals, 1 opened, 0 closed</span></div><div class="activity-row"><span class="activity-time">05-12 19:33</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text">Opened short Friedrich Merz out as Chancellor of Germany before at z=+6.50</span></div><div class="activity-row"><span class="activity-time">05-12 19:33</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text">Opened long Will Greece be in the top 3 at Eurovision 2026? at z=-5.04</span></div><div class="activity-row"><span class="activity-time">05-12 19:33</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text">Opened short Ethereum Up or Down - May 12, 3PM ET at z=+65.93</span></div><div class="activity-row"><span class="activity-time">05-12 19:33</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text">Scan #3: 3,172 markets, 28 signals, 3 opened, 0 closed</span></div><div class="activity-row"><span class="activity-time">05-12 19:18</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text">Opened short Will Kanye West visit Israel by June 30? at z=+10.39</span></div><div class="activity-row"><span class="activity-time">05-12 19:18</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text">Opened long LoL: Unicorns Of Love Sexy Edition vs ROSSMANN Cen at z=-50.37</span></div><div class="activity-row"><span class="activity-time">05-12 19:18</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text">Scan #2: 3,174 markets, 19 signals, 2 opened, 0 closed</span></div><div class="activity-row"><span class="activity-time">05-12 19:02</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text">Scan #1: 3,167 markets, 6 signals, 0 opened, 0 closed</span></div>
+        <div class="activity-row"><span class="activity-time">05-12 20:33</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text" title="Opened long Ethereum Up or Down - May 12, 4PM ET at z=-11.31">Opened long Ethereum Up or Down - May 12, 4PM ET at z=-11.31</span></div><div class="activity-row"><span class="activity-time">05-12 20:33</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text" title="Opened long Bitcoin Up or Down - May 12, 4:00PM-8:00PM ET at z=-8.95">Opened long Bitcoin Up or Down - May 12, 4:00PM-8:00PM ET at z=-8.95</span></div><div class="activity-row"><span class="activity-time">05-12 20:33</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text" title="Scan #7: 3,042 markets, 35 signals, 2 opened, 1 closed">Scan #7: 3,042 markets, 35 signals, 2 opened, 1 closed</span></div><div class="activity-row"><span class="activity-time">05-12 20:33</span><span class="activity-icon" style="color:#a371f7">✗</span><span class="activity-text" title="Closed short Will Lithuania be in the top 10 at Eurovision 2026 → &lt;span style=&quot;color:#f85149&quot;&gt;$-11.74&lt;/span&gt; (z_revert)">Closed short Will Lithuania be in the top 10 at Eurovision 2026 → <span style="color:#f85149">$-11.74</span> (z_revert)</span></div><div class="activity-row"><span class="activity-time">05-12 20:18</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text" title="Opened long Bitcoin Up or Down - May 12, 4PM ET at z=-16.44">Opened long Bitcoin Up or Down - May 12, 4PM ET at z=-16.44</span></div><div class="activity-row"><span class="activity-time">05-12 20:18</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text" title="Scan #6: 3,164 markets, 31 signals, 3 opened, 0 closed">Scan #6: 3,164 markets, 31 signals, 3 opened, 0 closed</span></div><div class="activity-row"><span class="activity-time">05-12 20:18</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text" title="Opened long Will Google have the top AI model at the end of Ju at z=-5.07">Opened long Will Google have the top AI model at the end of Ju at z=-5.07</span></div><div class="activity-row"><span class="activity-time">05-12 20:18</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text" title="Opened long LoL: paiN Gaming Academy vs 7REX - Game 1 Winner at z=-6.61">Opened long LoL: paiN Gaming Academy vs 7REX - Game 1 Winner at z=-6.61</span></div><div class="activity-row"><span class="activity-time">05-12 20:03</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text" title="Scan #5: 3,186 markets, 7 signals, 0 opened, 0 closed">Scan #5: 3,186 markets, 7 signals, 0 opened, 0 closed</span></div><div class="activity-row"><span class="activity-time">05-12 19:47</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text" title="Opened short Will Lithuania be in the top 10 at Eurovision 2026 at z=+5.94">Opened short Will Lithuania be in the top 10 at Eurovision 2026 at z=+5.94</span></div><div class="activity-row"><span class="activity-time">05-12 19:47</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text" title="Scan #4: 3,176 markets, 29 signals, 1 opened, 0 closed">Scan #4: 3,176 markets, 29 signals, 1 opened, 0 closed</span></div><div class="activity-row"><span class="activity-time">05-12 19:33</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text" title="Opened short Friedrich Merz out as Chancellor of Germany before at z=+6.50">Opened short Friedrich Merz out as Chancellor of Germany before at z=+6.50</span></div><div class="activity-row"><span class="activity-time">05-12 19:33</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text" title="Opened long Will Greece be in the top 3 at Eurovision 2026? at z=-5.04">Opened long Will Greece be in the top 3 at Eurovision 2026? at z=-5.04</span></div><div class="activity-row"><span class="activity-time">05-12 19:33</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text" title="Opened short Ethereum Up or Down - May 12, 3PM ET at z=+65.93">Opened short Ethereum Up or Down - May 12, 3PM ET at z=+65.93</span></div><div class="activity-row"><span class="activity-time">05-12 19:33</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text" title="Scan #3: 3,172 markets, 28 signals, 3 opened, 0 closed">Scan #3: 3,172 markets, 28 signals, 3 opened, 0 closed</span></div><div class="activity-row"><span class="activity-time">05-12 19:18</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text" title="Opened short Will Kanye West visit Israel by June 30? at z=+10.39">Opened short Will Kanye West visit Israel by June 30? at z=+10.39</span></div><div class="activity-row"><span class="activity-time">05-12 19:18</span><span class="activity-icon" style="color:#58a6ff">▲</span><span class="activity-text" title="Opened long LoL: Unicorns Of Love Sexy Edition vs ROSSMANN Cen at z=-50.37">Opened long LoL: Unicorns Of Love Sexy Edition vs ROSSMANN Cen at z=-50.37</span></div><div class="activity-row"><span class="activity-time">05-12 19:18</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text" title="Scan #2: 3,174 markets, 19 signals, 2 opened, 0 closed">Scan #2: 3,174 markets, 19 signals, 2 opened, 0 closed</span></div><div class="activity-row"><span class="activity-time">05-12 19:02</span><span class="activity-icon" style="color:#7d8590">↻</span><span class="activity-text" title="Scan #1: 3,167 markets, 6 signals, 0 opened, 0 closed">Scan #1: 3,167 markets, 6 signals, 0 opened, 0 closed</span></div>
       </div>
     </div>
   </div>
@@ -397,7 +397,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.360</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$103</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.2h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.3h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#7d8590">pending</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">crypto</span></div>
@@ -413,7 +413,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.440</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">2.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$102</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.2h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.3h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#7d8590">pending</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">crypto</span></div>
@@ -429,7 +429,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.388</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$103</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.5h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.6h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#7d8590">pending</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">crypto</span></div>
@@ -445,7 +445,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.312</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">5.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$103</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.5h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.6h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">48d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#7d8590">pending</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">tech</span></div>
@@ -461,7 +461,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.295</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">2.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$104</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.5h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">0.6h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#7d8590">pending</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">sports</span></div>
@@ -477,7 +477,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.150</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$101</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.2h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.3h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">232d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#f85149">-7.50¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">politics</span></div>
@@ -493,7 +493,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.617</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">4.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$102</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.2h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.3h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">3d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#f85149">-5.50¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">culture</span></div>
@@ -509,7 +509,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.858</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$108</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.2h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.3h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#f85149">-12.45¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">crypto</span></div>
@@ -525,7 +525,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.050</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">2.4¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$100</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.5h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.6h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">48d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#f85149">-5.30¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">culture</span></div>
@@ -541,7 +541,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.360</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$103</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.5h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.6h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#3fb950">+66.45¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">sports</span></div>

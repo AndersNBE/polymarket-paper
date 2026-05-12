@@ -88,7 +88,7 @@ CFG = {
     "dte_block_hi": 30,
     "direction_filter": None,   # None = both; "short" = only z>0; "long" = only z<0
     # execution model
-    "trade_size_usd": 100.0,
+    "trade_size_usd": 30.0,   # matches $720 bankroll (10 positions × $30 = $300, 42%)
     "fee_rates": {
         "sports_fees_v2": 0.03,
         "crypto_fees_v2": 0.07,
