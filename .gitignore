@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+markets.json
+paper_test_run.log
+results_*.json
+spread_sample.json
+blindspot_results.json
+.DS_Store
+.claude/
