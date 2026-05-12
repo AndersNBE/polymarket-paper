@@ -563,6 +563,8 @@ def _render_closed_card(c):
     pnl_color = "#3fb950" if pnl > 0 else "#f85149" if pnl < 0 else "#7d8590"
     entry_p = t.get("entry_exec_price", 0)
     exit_p = t.get("exit_exec_price", 0)
+    entry_mid = t.get("entry_price_mid")
+    exit_mid = t.get("exit_price_mid")
     direction = t.get("direction")
     dir_label = "SHORT" if direction == -1 else "LONG"
     dir_color = "#f85149" if direction == -1 else "#3fb950"
@@ -571,6 +573,22 @@ def _render_closed_card(c):
     clv = t.get("clv_value")
     clv_text = f"{clv*100:+.2f}¢" if clv is not None else "—"
     explanation = _exit_reason_explanation(reason)
+    # Spread = how far the actual fill was from the bar-close mid (the signal price).
+    # For LONG we BUY at ask (>= mid bad), SELL at bid (<= mid bad).
+    # For SHORT we SELL at bid (<= mid bad), BUY at ask (>= mid bad).
+    # Convention here: signed gap = (exec - mid) for entry, (exec - mid) for exit; show both raw.
+    spread_html = ""
+    if entry_mid is not None and exit_mid is not None:
+        e_gap = (entry_p - entry_mid) * 100  # cents
+        x_gap = (exit_p - exit_mid) * 100
+        total_spread_drag = (abs(e_gap) + abs(x_gap))
+        spread_color = "#f85149" if total_spread_drag > 5 else "#d29922" if total_spread_drag > 2 else "#7d8590"
+        spread_html = (
+            f'<div class="spread-row" style="color:{spread_color}">'
+            f'<span>Spread cost:</span> entry mid {entry_mid:.3f}→fill {entry_p:.3f} ({e_gap:+.1f}¢) · '
+            f'exit mid {exit_mid:.3f}→fill {exit_p:.3f} ({x_gap:+.1f}¢)'
+            f'</div>'
+        )
     return f"""
     <div class="pos-card closed-card">
         <div class="pos-card-top">
@@ -580,11 +598,12 @@ def _render_closed_card(c):
         <div class="pos-stats">
             <div class="pos-stat"><span class="pos-stat-label">z entry</span><span class="pos-stat-val">{t.get('entry_z', 0):+.2f}σ</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Dir</span><span class="pos-stat-val" style="color:{dir_color}">{dir_label}</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Px in→out</span><span class="pos-stat-val">{entry_p:.3f}→{exit_p:.3f}</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Fill in→out</span><span class="pos-stat-val">{entry_p:.3f}→{exit_p:.3f}</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">{held:.1f}h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val">{clv_text}</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Fees</span><span class="pos-stat-val">${t.get('total_fees_usd', 0):.2f}</span></div>
         </div>
+        {spread_html}
         <div class="exit-reason">Exit: <strong>{reason}</strong> — {explanation}</div>
         <div class="pos-chart-wrap"><canvas class="pos-chart" id="closedchart_{t.get('market_id')}_{int(t.get('exit_ts',0))}" width="600" height="120"></canvas></div>
     </div>"""
@@ -793,6 +812,8 @@ html = f"""<!DOCTYPE html>
   .closed-card .pos-card-top {{ align-items: center; }}
   .exit-reason {{ font-size: 11px; color: var(--text-dim); margin-top: 10px; padding: 6px 10px; background: var(--surface-2); border-radius: 6px; border-left: 2px solid var(--text-mute); }}
   .exit-reason strong {{ color: var(--text); }}
+  .spread-row {{ font-size: 10.5px; margin-top: 8px; padding: 4px 8px; background: var(--surface-2); border-radius: 4px; font-family: ui-monospace, 'SF Mono', monospace; }}
+  .spread-row span {{ color: var(--text-mute); margin-right: 4px; }}
 
   /* Animated numbers — initial fade in */
   .animated-num {{ animation: fadeUp 0.6s ease-out; }}
@@ -1257,23 +1278,25 @@ Object.keys(POSITION_CHARTS).forEach(mid => {{
     }}
     const isLong = data.direction === 1;
     const color = isLong ? DARK.green : DARK.red;
-    // Datasets: price line + entry-price horizontal line + entry vertical marker (via dataset of single point)
+    // Show both fill (exec) and signal (mid) — in wide-spread markets they differ a lot.
     const entryLine = prices.map(() => data.entry_price);
-    const entryMarker = prices.map((_, i) => i === entryIdx ? data.entry_mid : null);
+    const entryExecMarker = prices.map((_, i) => i === entryIdx ? data.entry_price : null);
+    const entryMidMarker = prices.map((_, i) => i === entryIdx ? data.entry_mid : null);
     new Chart(el, {{
         type: 'line',
         data: {{
             labels: labels,
             datasets: [
-                {{ data: prices, borderColor: DARK.blue, backgroundColor: DARK.blue + '15', fill: false, pointRadius: 0, borderWidth: 1.5 }},
-                {{ data: entryLine, borderColor: color, borderDash: [3, 3], pointRadius: 0, fill: false, borderWidth: 1 }},
-                {{ data: entryMarker, borderColor: color, backgroundColor: color, pointRadius: 5, pointStyle: 'triangle', showLine: false }},
+                {{ label: 'Mid', data: prices, borderColor: DARK.blue, backgroundColor: DARK.blue + '15', fill: false, pointRadius: 0, borderWidth: 1.5 }},
+                {{ label: 'Entry fill', data: entryLine, borderColor: color, borderDash: [3, 3], pointRadius: 0, fill: false, borderWidth: 1 }},
+                {{ label: 'Entry mid (signal)', data: entryMidMarker, borderColor: color, backgroundColor: 'transparent', pointRadius: 6, pointBorderWidth: 2, pointStyle: 'triangle', showLine: false }},
+                {{ label: 'Entry fill', data: entryExecMarker, borderColor: color, backgroundColor: color, pointRadius: 7, pointStyle: 'triangle', showLine: false }},
             ]
         }},
         options: {{
             responsive: true, maintainAspectRatio: false,
             plugins: {{
-                legend: {{ display: false }},
+                legend: {{ display: true, position: 'bottom', labels: {{ color: DARK.textDim, font: {{ size: 9 }}, boxWidth: 8, boxHeight: 8, padding: 6, filter: (item) => item.text !== 'Mid' && item.datasetIndex !== 1 }} }},
                 tooltip: {{
                     mode: 'index', intersect: false,
                     backgroundColor: '#0a0e14', borderColor: DARK.border, borderWidth: 1,
@@ -1321,22 +1344,29 @@ CLOSED_CHARTS.forEach(d => {{
     }}
     const isLong = d.direction === 1;
     const pnlColor = d.pnl > 0 ? DARK.green : d.pnl < 0 ? DARK.red : DARK.textMute;
-    const entryMarker = prices.map((_, i) => i === entryIdx ? d.entry_mid : null);
-    const exitMarker = prices.map((_, i) => i === exitIdx ? d.exit_mid : null);
+    const dirColor = isLong ? DARK.green : DARK.red;
+    // EXEC = actual fill (bid/ask). MID = bar close where signal fired.
+    // In wide-spread markets these differ a lot — show BOTH so the gap is visible.
+    const entryExecMarker = prices.map((_, i) => i === entryIdx ? d.entry_price : null);
+    const exitExecMarker = prices.map((_, i) => i === exitIdx ? d.exit_price : null);
+    const entryMidMarker = prices.map((_, i) => i === entryIdx ? d.entry_mid : null);
+    const exitMidMarker = prices.map((_, i) => i === exitIdx ? d.exit_mid : null);
     new Chart(el, {{
         type: 'line',
         data: {{
             labels: labels,
             datasets: [
-                {{ data: prices, borderColor: DARK.blue, backgroundColor: DARK.blue + '15', fill: false, pointRadius: 0, borderWidth: 1.5 }},
-                {{ data: entryMarker, borderColor: DARK.textDim, backgroundColor: DARK.textDim, pointRadius: 6, pointStyle: 'triangle', showLine: false }},
-                {{ data: exitMarker, borderColor: pnlColor, backgroundColor: pnlColor, pointRadius: 6, pointStyle: 'rectRot', showLine: false }},
+                {{ label: 'Mid', data: prices, borderColor: DARK.blue, backgroundColor: DARK.blue + '15', fill: false, pointRadius: 0, borderWidth: 1.5 }},
+                {{ label: 'Entry mid (signal)', data: entryMidMarker, borderColor: dirColor, backgroundColor: 'transparent', pointRadius: 6, pointBorderWidth: 2, pointStyle: 'triangle', showLine: false }},
+                {{ label: 'Entry fill', data: entryExecMarker, borderColor: dirColor, backgroundColor: dirColor, pointRadius: 7, pointStyle: 'triangle', showLine: false }},
+                {{ label: 'Exit mid (signal)', data: exitMidMarker, borderColor: pnlColor, backgroundColor: 'transparent', pointRadius: 6, pointBorderWidth: 2, pointStyle: 'rectRot', showLine: false }},
+                {{ label: 'Exit fill', data: exitExecMarker, borderColor: pnlColor, backgroundColor: pnlColor, pointRadius: 7, pointStyle: 'rectRot', showLine: false }},
             ]
         }},
         options: {{
             responsive: true, maintainAspectRatio: false,
             plugins: {{
-                legend: {{ display: false }},
+                legend: {{ display: true, position: 'bottom', labels: {{ color: DARK.textDim, font: {{ size: 9 }}, boxWidth: 8, boxHeight: 8, padding: 6, filter: (item) => item.text !== 'Mid' }} }},
                 tooltip: {{ mode: 'index', intersect: false, backgroundColor: '#0a0e14', borderColor: DARK.border, borderWidth: 1, padding: 8, filter: (ctx) => ctx.datasetIndex === 0 }},
             }},
             scales: {{
