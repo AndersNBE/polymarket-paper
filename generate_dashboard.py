@@ -225,6 +225,111 @@ else:
 total_deployed = sum(p.get("shares", 0) * (p.get("entry_exec_price", 0) if p.get("direction") == 1 else (1 - p.get("entry_exec_price", 0))) for p in open_positions.values())
 util_pct = 100 * total_deployed / BANKROLL_USD if BANKROLL_USD else 0
 
+# Sparklines (last 20 datapoints per metric)
+spark_equity = equity_y[-20:] if len(equity_y) >= 2 else []
+
+spark_clv = []
+running_clv = 0
+clv_running_count = 0
+for t in closed:
+    if t.get("clv_value") is not None:
+        clv_running_count += 1
+        running_clv += t["clv_value"]
+        spark_clv.append(round(100 * running_clv / clv_running_count, 3))  # cumulative avg CLV in cents
+spark_clv = spark_clv[-20:]
+
+spark_winrate = []
+if len(pnls) >= 5:
+    for i in range(min(20, len(pnls))):
+        # Compute win rate up to that point
+        end_idx = len(pnls) - 20 + i + 1
+        if end_idx < 5: continue
+        chunk = pnls[:end_idx]
+        spark_winrate.append(round(100 * sum(1 for x in chunk if x > 0) / len(chunk), 1))
+
+spark_positions = []
+for c in sorted(cycles, key=lambda c: c.get("ts", 0))[-20:]:
+    spark_positions.append(c.get("open_positions_after", 0))
+
+# Trade tape — last 30 trades as binary outcomes
+tape_data = []
+for t in closed[-30:]:
+    pnl = t.get("net_pnl_usd", 0)
+    tape_data.append({
+        "pnl": round(pnl, 2),
+        "win": pnl > 0,
+        "z": round(t.get("entry_z", 0), 1),
+        "q": str(t.get("question", ""))[:40],
+    })
+tape_html = ""
+for td in tape_data:
+    color = "#3fb950" if td["win"] else "#f85149" if td["pnl"] < 0 else "#7d8590"
+    tooltip = f"{td['q']} | z={td['z']:+} | ${td['pnl']:+.2f}"
+    tape_html += f'<div class="tape-dot" style="background:{color}" title="{escape(tooltip)}"></div>'
+if not tape_html:
+    tape_html = '<div class="empty-state-small" style="padding:8px">No trades yet</div>'
+
+# Time-of-day heatmap: avg PnL per (weekday, hour) bucket
+hod_buckets = defaultdict(lambda: {"pnl": 0.0, "count": 0})
+for t in closed:
+    dt = datetime.datetime.fromtimestamp(t.get("entry_ts", 0), datetime.timezone.utc)
+    key = (dt.weekday(), dt.hour)  # 0=Mon
+    hod_buckets[key]["pnl"] += t.get("net_pnl_usd", 0)
+    hod_buckets[key]["count"] += 1
+
+# Build heatmap HTML (rows = days Mon-Sun, columns = hours 0-23)
+day_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+max_abs_cell = max((abs(v["pnl"]) for v in hod_buckets.values()), default=1) or 1
+hod_html = '<div class="hod-grid">'
+hod_html += '<div class="hod-corner"></div>'
+for h in range(24):
+    label = f"{h:02d}" if h % 3 == 0 else ""
+    hod_html += f'<div class="hod-hour-label">{label}</div>'
+for d in range(7):
+    hod_html += f'<div class="hod-day-label">{day_labels[d]}</div>'
+    for h in range(24):
+        cell = hod_buckets.get((d, h))
+        if cell and cell["count"] > 0:
+            pnl = cell["pnl"]
+            intensity = min(1.0, abs(pnl) / max_abs_cell)
+            if pnl > 0:
+                bg = f"rgba(63, 185, 80, {0.2 + 0.7*intensity})"
+            else:
+                bg = f"rgba(248, 81, 73, {0.2 + 0.7*intensity})"
+            tooltip = f"{day_labels[d]} {h:02d}:00  ${pnl:+.2f} ({cell['count']} trades)"
+        else:
+            bg = "#161b22"
+            tooltip = f"{day_labels[d]} {h:02d}:00  no trades"
+        hod_html += f'<div class="hod-cell" style="background:{bg}" title="{tooltip}"></div>'
+hod_html += '</div>'
+
+# Portfolio donut: open positions by category
+portfolio_cats = defaultdict(float)
+for pos in open_positions.values():
+    cat = (pos.get("fee_type") or "other").replace("_fees", "").replace("_v2", "").replace("_prices", "")
+    stake = pos.get("shares", 0) * (pos.get("entry_exec_price", 0) if pos.get("direction") == 1 else (1 - pos.get("entry_exec_price", 0)))
+    portfolio_cats[cat] += stake
+portfolio_labels = list(portfolio_cats.keys())
+portfolio_values = [round(v, 2) for v in portfolio_cats.values()]
+
+# Streak history — walk all trades, identify each streak
+streak_history = []
+if closed:
+    cur_sign = None
+    cur_len = 0
+    for t in closed:
+        sign = 1 if t.get("net_pnl_usd", 0) > 0 else -1 if t.get("net_pnl_usd", 0) < 0 else 0
+        if sign == cur_sign:
+            cur_len += 1
+        else:
+            if cur_sign is not None and cur_sign != 0:
+                streak_history.append(cur_len * cur_sign)
+            cur_sign = sign
+            cur_len = 1 if sign != 0 else 0
+    if cur_sign is not None and cur_sign != 0:
+        streak_history.append(cur_len * cur_sign)
+streak_history = streak_history[-30:]   # last 30 streaks
+
 # Sparklines for hero (use recent equity if available)
 sparkline_data = equity_y[-30:] if equity_y else []
 
@@ -544,6 +649,29 @@ html = f"""<!DOCTYPE html>
   .card, .hero-cell, .pos-card {{ transition: border-color 0.2s ease; }}
   .card:hover {{ border-color: var(--border-strong); }}
 
+  /* Sparkline (inside hero cell) */
+  .sparkline {{ width: 100%; height: 30px; margin-top: 12px; opacity: 0.85; }}
+
+  /* Trade tape */
+  .tape-row {{ display: flex; gap: 4px; flex-wrap: wrap; padding: 4px 0; }}
+  .tape-dot {{ width: 22px; height: 22px; border-radius: 5px; cursor: default; transition: transform 0.15s; }}
+  .tape-dot:hover {{ transform: scale(1.3); z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }}
+
+  /* Time-of-day heatmap */
+  .hod-grid {{ display: grid; grid-template-columns: 36px repeat(24, 1fr); gap: 2px; margin-top: 6px; }}
+  .hod-corner {{ }}
+  .hod-hour-label {{ text-align: center; font-size: 9px; color: var(--text-mute); font-family: "SF Mono", monospace; padding: 2px 0; }}
+  .hod-day-label {{ font-size: 10px; color: var(--text-mute); padding-right: 4px; padding-top: 4px; text-align: right; }}
+  .hod-cell {{ aspect-ratio: 1; border-radius: 2px; cursor: default; transition: transform 0.15s; }}
+  .hod-cell:hover {{ transform: scale(1.5); z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }}
+
+  /* Animated numbers — initial fade in */
+  .animated-num {{ animation: fadeUp 0.6s ease-out; }}
+  @keyframes fadeUp {{
+    from {{ opacity: 0; transform: translateY(8px); }}
+    to {{ opacity: 1; transform: translateY(0); }}
+  }}
+
   @media (max-width: 1100px) {{
     .insights-grid {{ grid-template-columns: repeat(3, 1fr); }}
   }}
@@ -588,24 +716,37 @@ html = f"""<!DOCTYPE html>
   <div class="hero">
     <div class="hero-cell hero-cell-primary">
       <div class="hero-label">Net PnL</div>
-      <div class="hero-value mono" style="color:{color_for(total_pnl)}">${total_pnl:+.2f}</div>
+      <div class="hero-value mono animated-num" data-target="{total_pnl}" data-prefix="$" data-prec="2" style="color:{color_for(total_pnl)}">${total_pnl:+.2f}</div>
       <div class="hero-sub">{n_closed} trades · ${total_fees:.2f} fees paid · ${'+' if total_pnl-total_fees > 0 else ''}${total_pnl + total_fees:.2f} before fees</div>
+      <canvas class="sparkline" id="spark_equity"></canvas>
     </div>
     <div class="hero-cell">
       <div class="hero-label">Avg CLV ★</div>
       <div class="hero-value mono" style="color:{color_for(avg_clv)}">{avg_clv*100:+.2f}¢</div>
       <div class="hero-sub">{n_with_clv} measured · {clv_winrate:.0f}% positive · target +{EXP_CLV:.1f}¢</div>
+      <canvas class="sparkline" id="spark_clv"></canvas>
     </div>
     <div class="hero-cell">
       <div class="hero-label">Win Rate</div>
       <div class="hero-value mono">{win_rate:.1f}<span style="font-size:18px;color:var(--text-dim)">%</span></div>
       <div class="hero-sub">{wins}/{n_closed} · expected ~{EXP_WIN_RATE}%</div>
+      <canvas class="sparkline" id="spark_winrate"></canvas>
     </div>
     <div class="hero-cell">
       <div class="hero-label">Open Positions</div>
       <div class="hero-value mono">{n_open}<span style="font-size:18px;color:var(--text-dim)">/10</span></div>
-      <div class="hero-sub">${sum((p.get('shares',0) * (p.get('entry_exec_price',0) if p.get('direction')==1 else (1-p.get('entry_exec_price',0)))) for p in open_positions.values()):.0f} deployed of ${BANKROLL_USD}</div>
+      <div class="hero-sub">${total_deployed:.0f} deployed of ${BANKROLL_USD}</div>
+      <canvas class="sparkline" id="spark_pos"></canvas>
     </div>
+  </div>
+
+  <!-- TRADE TAPE -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-title">
+      <div class="card-title-row">📼 Trade tape — last 30</div>
+      <span style="color:var(--text-mute);font-size:11px">hover for detail</span>
+    </div>
+    <div class="tape-row">{tape_html}</div>
   </div>
 
   <!-- INSIGHTS STRIP -->
@@ -703,6 +844,46 @@ html = f"""<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- STRATEGY ANALYTICS ROW -->
+  <div class="row-2-1">
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-row">🕐 Time-of-day performance heatmap</div>
+        <span style="color:var(--text-mute);font-size:11px">UTC · all days × all hours</span>
+      </div>
+      {hod_html}
+      <div class="legend-row" style="margin-top:8px">
+        <div><span class="legend-dot" style="background:rgba(248,81,73,0.7)"></span>Loss hours</div>
+        <div><span class="legend-dot" style="background:#161b22;border:1px solid var(--border)"></span>Unused</div>
+        <div><span class="legend-dot" style="background:rgba(63,185,80,0.7)"></span>Profit hours</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-row">🥧 Open portfolio</div>
+        <span style="color:var(--text-mute);font-size:11px">stake by category</span>
+      </div>
+      <div class="chart-cell"><canvas id="portfolio"></canvas></div>
+    </div>
+  </div>
+
+  <!-- STREAK + OPEN POSITIONS -->
+  <div class="row-1-1">
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-row">📊 Streak history</div>
+        <span style="color:var(--text-mute);font-size:11px">consecutive W/L runs</span>
+      </div>
+      <div class="chart-cell-small"><canvas id="streaks"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-row">📈 PnL distribution per trade</div>
+      </div>
+      <div class="chart-cell-small"><canvas id="pnlhist"></canvas></div>
+    </div>
+  </div>
+
   <!-- OPEN POSITIONS -->
   <div class="card" style="margin-bottom:14px">
     <div class="card-title">
@@ -759,20 +940,14 @@ html = f"""<!DOCTYPE html>
     </div>
   </div>
 
-  <div class="row-1-1">
-    <div class="card">
-      <div class="card-title">💰 PnL distribution per trade</div>
-      <div class="chart-cell"><canvas id="pnlhist"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">🏷 Performance by category</div>
-      <table>
-        <thead>
-          <tr><th>Category</th><th class="num">n</th><th class="num">Win%</th><th class="num">Avg</th><th class="num">Total</th></tr>
-        </thead>
-        <tbody>{cat_rows}</tbody>
-      </table>
-    </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-title">🏷 Performance by market category</div>
+    <table>
+      <thead>
+        <tr><th>Category</th><th class="num">n</th><th class="num">Win%</th><th class="num">Avg</th><th class="num">Total</th></tr>
+      </thead>
+      <tbody>{cat_rows}</tbody>
+    </table>
   </div>
 
   <!-- RECENT TRADES -->
@@ -921,6 +1096,97 @@ if (wGross !== 0 || wFees !== 0 || wGas !== 0) {{
 }} else {{
     document.getElementById('waterfall').parentElement.innerHTML += '<div class="empty-state-small">No trades yet</div>';
 }}
+
+// ── Sparklines (inside hero cells) ──
+const sparkOpts = {{
+    responsive: true, maintainAspectRatio: false,
+    plugins: {{ legend: {{ display: false }}, tooltip: {{ enabled: false }} }},
+    scales: {{ x: {{ display: false }}, y: {{ display: false }} }},
+    elements: {{ point: {{ radius: 0 }}, line: {{ borderWidth: 1.5, tension: 0.4 }} }}
+}};
+function mkSpark(id, data, color) {{
+    if (!data || data.length < 2) return;
+    new Chart(document.getElementById(id), {{
+        type: 'line',
+        data: {{ labels: data.map((_, i) => i), datasets: [{{ data: data, borderColor: color, backgroundColor: color + '20', fill: true }}] }},
+        options: sparkOpts
+    }});
+}}
+mkSpark('spark_equity', {json.dumps(spark_equity)}, '{('#3fb950' if total_pnl >= 0 else '#f85149')}');
+mkSpark('spark_clv', {json.dumps(spark_clv)}, '{('#3fb950' if avg_clv >= 0 else '#f85149')}');
+mkSpark('spark_winrate', {json.dumps(spark_winrate)}, '#58a6ff');
+mkSpark('spark_pos', {json.dumps(spark_positions)}, '#a371f7');
+
+// ── Portfolio donut ──
+const portLabels = {json.dumps(portfolio_labels)};
+const portValues = {json.dumps(portfolio_values)};
+if (portValues.length > 0) {{
+    new Chart(document.getElementById('portfolio'), {{
+        type: 'doughnut',
+        data: {{
+            labels: portLabels,
+            datasets: [{{
+                data: portValues,
+                backgroundColor: ['#58a6ff', '#3fb950', '#a371f7', '#d29922', '#f85149', '#79c0ff', '#7ee787', '#ff7b72'],
+                borderColor: '#0a0e14', borderWidth: 2
+            }}]
+        }},
+        options: {{
+            ...COMMON,
+            plugins: {{
+                ...COMMON.plugins,
+                legend: {{ display: true, position: 'right', labels: {{ color: DARK.text, font: {{ size: 11 }} }} }},
+                tooltip: {{ callbacks: {{ label: (ctx) => `${{ctx.label}}: $${{ctx.parsed.toFixed(2)}}` }} }}
+            }},
+            cutout: '60%'
+        }}
+    }});
+}} else {{
+    document.getElementById('portfolio').parentElement.innerHTML = '<div class="empty-state">No open positions</div>';
+}}
+
+// ── Streak history ──
+const streakData = {json.dumps(streak_history)};
+if (streakData.length > 0) {{
+    new Chart(document.getElementById('streaks'), {{
+        type: 'bar',
+        data: {{
+            labels: streakData.map((_, i) => i + 1),
+            datasets: [{{
+                data: streakData,
+                backgroundColor: streakData.map(v => v > 0 ? DARK.green + 'cc' : DARK.red + 'cc'),
+                borderWidth: 0,
+                borderRadius: 3,
+            }}]
+        }},
+        options: {{
+            ...COMMON,
+            scales: {{ y: {{ ticks: {{ callback: (v) => Math.abs(v) }} }} }},
+            plugins: {{ ...COMMON.plugins, tooltip: {{ callbacks: {{ label: (ctx) => (ctx.parsed.y > 0 ? `${{ctx.parsed.y}} wins in a row` : `${{Math.abs(ctx.parsed.y)}} losses in a row`) }} }} }}
+        }}
+    }});
+}} else {{
+    document.getElementById('streaks').parentElement.innerHTML += '<div class="empty-state-small">No streaks yet · need closed trades</div>';
+}}
+
+// ── Animated counter (count up on load for net PnL hero) ──
+document.querySelectorAll('.animated-num').forEach(el => {{
+    const target = parseFloat(el.dataset.target);
+    if (isNaN(target)) return;
+    const prefix = el.dataset.prefix || '';
+    const prec = parseInt(el.dataset.prec || '0');
+    const duration = 800;
+    const start = performance.now();
+    const fmt = (v) => (v >= 0 ? '+' : '') + prefix + v.toFixed(prec);
+    function tick(t) {{
+        const p = Math.min(1, (t - start) / duration);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = fmt(target * eased);
+        if (p < 1) requestAnimationFrame(tick);
+        else el.textContent = fmt(target);
+    }}
+    requestAnimationFrame(tick);
+}});
 
 // PnL histogram
 const pnls = {json.dumps(pnls)};
