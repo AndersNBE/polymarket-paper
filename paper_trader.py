@@ -65,7 +65,7 @@ CLOB = "https://clob.polymarket.com"
 CFG = {
     "poll_interval_sec": 15 * 60,
     "universe_refresh_sec": 6 * 3600,
-    "max_open_positions": 50,
+    "max_open_positions": 10,   # realistic for $720 bankroll with $30 stake
     # universe filters
     "min_liquidity": 1000,
     "max_liquidity": 50000,
@@ -99,8 +99,9 @@ CFG = {
         "crypto_15_min": 0.07,
         "_default": 0.05,
     },
-    "gas_per_fill_usd": 0.05,
-    "slippage_ticks": 1,
+    "gas_per_fill_usd": 0.15,    # conservative; can spike to $2 under Polygon congestion
+    "slippage_ticks": 1,         # additional 1-tick "latency cost" beyond orderbook walk
+    "clv_lookback_sec": 30 * 60, # measure CLV 30 min after entry
     # require both sides quoted with at least this many tick widths
     "max_spread_for_entry": 0.05,   # don't enter if spread > 5¢
     # rate limiting
@@ -242,6 +243,65 @@ def fetch_price_history(token_id):
         return data.get("history", [])
     return None
 
+def fetch_orderbook(token_id):
+    """Returns dict with 'bids' (list[{price,size}]) and 'asks'."""
+    return fetch_json(f"{CLOB}/book", params={"token_id": token_id})
+
+def walk_orderbook(book, side, target_dollars):
+    """Walk through orderbook levels for a buy (LONG) or sell (SHORT) of target_dollars.
+
+    For LONG: walk asks ascending; we BUY YES shares at increasing prices.
+    For SHORT: walk bids descending; we conceptually SELL YES shares (== buy NO).
+      For each YES bid at price P, equivalent NO ask is (1-P).
+      Capital cost per share when shorting = (1 - P).
+
+    Returns: (avg_yes_price, shares_filled, dollars_spent) or (None, 0, 0) if no fill.
+    """
+    if not book:
+        return None, 0, 0
+    if side == "long":
+        orders = book.get("asks") or []
+        try:
+            orders = sorted(orders, key=lambda o: float(o["price"]))
+        except (KeyError, ValueError):
+            return None, 0, 0
+    else:  # short
+        orders = book.get("bids") or []
+        try:
+            orders = sorted(orders, key=lambda o: -float(o["price"]))
+        except (KeyError, ValueError):
+            return None, 0, 0
+
+    total_shares = 0.0
+    total_cost = 0.0
+    for o in orders:
+        try:
+            p = float(o["price"])
+            s = float(o["size"])
+        except (KeyError, ValueError, TypeError):
+            continue
+        cost_per_share = p if side == "long" else (1.0 - p)
+        if cost_per_share <= 0:
+            continue
+        level_cost = cost_per_share * s
+        if total_cost + level_cost >= target_dollars:
+            remaining = target_dollars - total_cost
+            sh = remaining / cost_per_share
+            total_shares += sh
+            total_cost = target_dollars
+            break
+        else:
+            total_shares += s
+            total_cost += level_cost
+    if total_shares <= 0 or total_cost <= 0:
+        return None, 0, 0
+    if side == "long":
+        avg_yes_price = total_cost / total_shares
+    else:
+        # avg NO price = total_cost / total_shares  →  avg YES price = 1 - avg NO price
+        avg_yes_price = 1.0 - (total_cost / total_shares)
+    return avg_yes_price, total_shares, total_cost
+
 def get_history_cached(state, market_id, token_id):
     """Use cached history when fresh; otherwise refetch.
        Trim cached history to the most recent 100 bars to keep state file small."""
@@ -287,8 +347,9 @@ def compute_signal(prices, window):
 # ────────────────────────────────────────────────────────────────────────
 # EXECUTION (paper)
 # ────────────────────────────────────────────────────────────────────────
-def simulate_entry(market, direction, signal_data):
+def simulate_entry(market, direction, signal_data, token_id=None):
     """direction=-1 means we're short (sell YES at bid); +1 means long (buy YES at ask).
+       Uses real orderbook (walks the book) to compute fill price for our trade size.
        Returns position dict or None."""
     bid = to_float(market.get("bestBid"))
     ask = to_float(market.get("bestAsk"))
@@ -298,18 +359,31 @@ def simulate_entry(market, direction, signal_data):
     spread = ask - bid
     if spread > CFG["max_spread_for_entry"]:
         return None
-    # Apply slippage
     slip = CFG["slippage_ticks"] * tick
-    if direction == 1:
-        # BUY YES: pay ask + slip
-        exec_price = ask + slip
+
+    # Walk the orderbook for realistic fill price
+    book = fetch_orderbook(token_id) if token_id else None
+    time.sleep(CFG["api_delay_sec"])
+    if book:
+        side = "long" if direction == 1 else "short"
+        avg_yes_price, shares, dollars_spent = walk_orderbook(book, side, CFG["trade_size_usd"])
+        if avg_yes_price is None:
+            return None  # not enough depth
+        # Apply additional latency-slippage (1 tick beyond walked price)
+        if direction == 1:
+            exec_price = min(0.999, avg_yes_price + slip)
+        else:
+            exec_price = max(0.001, avg_yes_price - slip)
     else:
-        # SHORT YES: sell at bid - slip (or equivalently buy NO at its ask)
-        exec_price = bid - slip
+        # Fallback: use bestBid/Ask
+        if direction == 1:
+            exec_price = ask + slip
+        else:
+            exec_price = bid - slip
+        shares = CFG["trade_size_usd"] / exec_price if direction == 1 else CFG["trade_size_usd"] / (1 - exec_price)
+
     if exec_price <= 0.001 or exec_price >= 0.999:
         return None
-    # Compute shares: $trade_size_usd / exec_price
-    shares = CFG["trade_size_usd"] / exec_price if direction == 1 else CFG["trade_size_usd"] / (1 - exec_price)
     fee_type = market.get("feeType")
     entry_fee = fee_for_fill(exec_price, shares, fee_type)
     gas = CFG["gas_per_fill_usd"]
@@ -332,6 +406,10 @@ def simulate_entry(market, direction, signal_data):
         "entry_gas": gas,
         "tick_size": tick,
         "end_date": market.get("endDate"),
+        "clv_check_at": now_ts() + CFG["clv_lookback_sec"],
+        "clv_price": None,
+        "clv_value": None,
+        "yes_token_id": token_id,
     }
 
 def simulate_exit(position, market, reason, exit_price_mid):
@@ -339,19 +417,38 @@ def simulate_exit(position, market, reason, exit_price_mid):
     ask = to_float(market.get("bestAsk"))
     tick = position.get("tick_size", 0.01)
     if bid is None or ask is None:
-        # if we can't see quotes, exit at mid (best estimate)
         bid = exit_price_mid
         ask = exit_price_mid
     slip = CFG["slippage_ticks"] * tick
     direction = position["direction"]
-    if direction == 1:
-        # Long, sell YES at bid - slip
-        exec_price = max(0.001, bid - slip)
-    else:
-        # Short, buy YES back at ask + slip
-        exec_price = min(0.999, ask + slip)
-    fee_type = position.get("fee_type")
     shares = position["shares"]
+    fee_type = position.get("fee_type")
+
+    # Walk orderbook for exit (opposite side of entry)
+    yes_token = position.get("yes_token_id")
+    book = fetch_orderbook(yes_token) if yes_token else None
+    time.sleep(CFG["api_delay_sec"])
+    if book:
+        # Exit side: long-exit = sell YES (walk bids); short-exit = buy YES (walk asks)
+        side = "short" if direction == 1 else "long"
+        # Target $ we receive (long exit) or pay (short exit) ≈ shares * avg_price
+        # Walk by target_dollars = shares * current best_quote as estimate
+        est_price = bid if direction == 1 else ask
+        target_dollars = shares * (est_price if direction == 1 else (1 - est_price))
+        avg_yes_price, shares_filled, _ = walk_orderbook(book, side, target_dollars)
+        if avg_yes_price is not None:
+            if direction == 1:
+                exec_price = max(0.001, avg_yes_price - slip)
+            else:
+                exec_price = min(0.999, avg_yes_price + slip)
+        else:
+            exec_price = max(0.001, bid - slip) if direction == 1 else min(0.999, ask + slip)
+    else:
+        if direction == 1:
+            exec_price = max(0.001, bid - slip)
+        else:
+            exec_price = min(0.999, ask + slip)
+
     exit_fee = fee_for_fill(exec_price, shares, fee_type)
     gas = CFG["gas_per_fill_usd"]
     # PnL
@@ -445,6 +542,17 @@ def run_cycle(state):
         sig = compute_signal(prices, CFG["rolling_window"])
         if sig is None:
             continue
+        # CLV check: if past clv_check_at and not yet measured, capture mid-price NOW
+        if pos.get("clv_price") is None and now_ts() >= pos.get("clv_check_at", float("inf")):
+            cur_bid = to_float(market.get("bestBid"))
+            cur_ask = to_float(market.get("bestAsk"))
+            if cur_bid is not None and cur_ask is not None:
+                clv_midprice = 0.5 * (cur_bid + cur_ask)
+                pos["clv_price"] = clv_midprice
+                # CLV positive = we entered at a better price than where market is now
+                # Long: bought low; market moved up → mid > entry_mid → positive CLV
+                # Short: sold high; market moved down → mid < entry_mid → positive CLV
+                pos["clv_value"] = pos["direction"] * (clv_midprice - pos.get("entry_price_mid", clv_midprice))
         # Check exit
         held_hours = (now_ts() - pos["entry_ts"]) / 3600
         reason = None
@@ -457,7 +565,7 @@ def run_cycle(state):
             append_jsonl(TRADE_LOG, closed)
             del state["positions"][mid]
             closed_count += 1
-            print(f"  ✗ Closed ({reason}): {pos['question'][:60]}  pnl=${closed['net_pnl_usd']:+.2f}  z_at_exit={sig['z']:+.2f}")
+            print(f"  ✗ Closed ({reason}): {pos['question'][:60]}  pnl=${closed['net_pnl_usd']:+.2f}  z_at_exit={sig['z']:+.2f}  CLV={closed.get('clv_value') or 'n/a'}")
 
     # ─── Step 2: Detect new entries ───
     entered_count = 0
@@ -507,7 +615,7 @@ def run_cycle(state):
                 continue
             if CFG.get("direction_filter") == "long" and direction != 1:
                 continue
-            pos = simulate_entry(market, direction, sig)
+            pos = simulate_entry(market, direction, sig, token_id=tok)
             if pos is None:
                 continue
             pos["dte"] = dte

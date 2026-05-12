@@ -77,6 +77,13 @@ wins = sum(1 for p in pnls if p > 0)
 win_rate = (wins / n_closed * 100) if n_closed else 0
 avg_trade = (total_pnl / n_closed) if n_closed else 0
 
+# CLV stats
+clv_values = [t.get("clv_value") for t in closed if t.get("clv_value") is not None]
+n_with_clv = len(clv_values)
+avg_clv = (sum(clv_values) / n_with_clv) if n_with_clv else 0
+clv_positive = sum(1 for c in clv_values if c > 0)
+clv_winrate = (clv_positive / n_with_clv * 100) if n_with_clv else 0
+
 # ── Equity curve + drawdown ──────────────────────────────────────
 equity_x = []
 equity_y = []
@@ -278,16 +285,21 @@ html = f"""<!DOCTYPE html>
   </div>
 </div>
 
-<div class="grid3">
+<div class="grid4">
   <div class="card">
     <h3>Max Drawdown</h3>
     <div class="val {'red' if max_dd < 0 else 'grey'}">${max_dd:+.2f}</div>
     <div class="sub">worst peak-to-trough</div>
   </div>
   <div class="card">
+    <h3>Avg CLV (closing line value)</h3>
+    <div class="val {'green' if avg_clv > 0 else 'red' if avg_clv < 0 else 'grey'}">{avg_clv*100:+.2f}¢</div>
+    <div class="sub">{n_with_clv} measured · {clv_winrate:.0f}% positive · ★ best edge proxy</div>
+  </div>
+  <div class="card">
     <h3>Total Signals Seen</h3>
     <div class="val">{n_signals_total}</div>
-    <div class="sub">that passed all filters</div>
+    <div class="sub">passed all filters</div>
   </div>
   <div class="card">
     <h3>Strategy Status</h3>
