@@ -199,14 +199,14 @@
       <div class="logo-mark">P</div>
       <div class="logo-text">
         <h1>Polymarket Paper Trader</h1>
-        <div class="sub">2026-05-12 21:59:06 UTC · Cycle #10 · Started 2026-05-12</div>
+        <div class="sub">2026-05-12 22:06:12 UTC · Cycle #10 · Started 2026-05-12</div>
       </div>
     </div>
     <div class="live-pill">
       <span class="live-dot"></span>
       <span style="color:#3fb950;font-weight:600">LIVE</span>
       <span style="color:var(--text-mute)">·</span>
-      <span style="color:var(--text-dim)">11m ago</span>
+      <span style="color:var(--text-dim)">18m ago</span>
     </div>
   </header>
 
@@ -242,7 +242,7 @@
     <div class="hero-cell">
       <div class="hero-label">Open Positions</div>
       <div class="hero-value mono">1<span style="font-size:18px;color:var(--text-dim)">/10</span></div>
-      <div class="hero-sub">$108 deployed of $720</div>
+      <div class="hero-sub">$30 deployed of $720</div>
       <div class="sparkline-wrap"><canvas class="sparkline" id="spark_pos" width="200" height="30"></canvas></div>
     </div>
   </div>
@@ -293,8 +293,8 @@
       <div class="insight-icon" style="background:#a371f733;color:#a371f7">⚖</div>
       <div class="insight-body">
         <div class="insight-label">Capital deployed</div>
-        <div class="insight-val">15<span class="insight-suffix">%</span></div>
-        <div class="insight-sub">$108 of $720 bankroll</div>
+        <div class="insight-val">4<span class="insight-suffix">%</span></div>
+        <div class="insight-sub">$30 of $720 bankroll</div>
       </div>
     </div>
   </div>
@@ -406,8 +406,8 @@
             <div class="pos-stat"><span class="pos-stat-label">z-score</span><span class="pos-stat-val">+65.93σ</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.858</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$108</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">2.4h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$30</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">2.5h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#f85149">-12.45¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">crypto</span></div>
@@ -715,7 +715,7 @@ if (wGross !== 0 || wFees !== 0 || wGas !== 0) {
 }
 
 // ── Per-position price trajectory charts ──
-const POSITION_CHARTS = {"2224431": {"bars": [{"t": 1778572808, "p": 0.5}, {"t": 1778576409, "p": 0.5}, {"t": 1778580004, "p": 0.5}, {"t": 1778583606, "p": 0.5}, {"t": 1778587208, "p": 0.5}, {"t": 1778590806, "p": 0.5}, {"t": 1778594407, "p": 0.5}, {"t": 1778598009, "p": 0.5}, {"t": 1778601606, "p": 0.5}, {"t": 1778605227, "p": 0.5}, {"t": 1778608808, "p": 0.485}, {"t": 1778612409, "p": 0.475}, {"t": 1778616009, "p": 0.9995}, {"t": 1778619607, "p": 0.9995}, {"t": 1778623085, "p": 0.9995}], "entry_ts": 1778614400, "entry_price": 0.857725992503843, "entry_mid": 0.875, "direction": -1, "entry_z": 65.93097615704828}};
+const POSITION_CHARTS = {"2224431": {"bars": [{"t": 1778572808, "p": 0.5}, {"t": 1778576409, "p": 0.5}, {"t": 1778580004, "p": 0.5}, {"t": 1778583606, "p": 0.5}, {"t": 1778587208, "p": 0.5}, {"t": 1778590806, "p": 0.5}, {"t": 1778594407, "p": 0.5}, {"t": 1778598009, "p": 0.5}, {"t": 1778601606, "p": 0.5}, {"t": 1778605227, "p": 0.5}, {"t": 1778608808, "p": 0.485}, {"t": 1778612409, "p": 0.475}, {"t": 1778616009, "p": 0.9995}, {"t": 1778619607, "p": 0.9995}, {"t": 1778623214, "p": 0.9995}, {"t": 1778623567, "p": 0.9995}], "entry_ts": 1778614400, "entry_price": 0.857725992503843, "entry_mid": 0.875, "direction": -1, "entry_z": 65.93097615704828}};
 
 Object.keys(POSITION_CHARTS).forEach(mid => {
     const data = POSITION_CHARTS[mid];
@@ -847,7 +847,7 @@ mkSpark('spark_pos', [0, 2, 5, 6, 6, 9, 10, 10, 10, 10], '#a371f7');
 
 // ── Portfolio donut ──
 const portLabels = ["crypto"];
-const portValues = [107.56];
+const portValues = [30.0];
 if (portValues.length > 0) {
     new Chart(document.getElementById('portfolio'), {
         type: 'doughnut',
