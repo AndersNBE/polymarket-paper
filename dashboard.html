@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Polymarket Paper Trader · Dashboard</title>
+<meta http-equiv="refresh" content="60">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+          max-width: 1200px; margin: 0 auto; padding: 20px; background: #f6f8fa; color: #1f2328; }
+  h1, h2 { color: #1f2328; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: #656d76; font-size: 13px; margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { background: #fff; border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; }
+  .card h3 { margin: 0; font-size: 12px; color: #656d76; text-transform: uppercase; letter-spacing: 0.05em; }
+  .card .val { font-size: 28px; font-weight: 600; margin-top: 8px; }
+  .card .sub { font-size: 12px; color: #656d76; margin-top: 4px; }
+  .green { color: #2ea043; }
+  .red { color: #cf222e; }
+  .grey { color: #656d76; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #d0d7de; font-size: 13px; }
+  th { background: #f6f8fa; color: #656d76; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+  tr:last-child td { border-bottom: none; }
+  .card-wide { background: #fff; border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px; font-size: 13px; }
+  .compare > div { padding: 8px; background: #f6f8fa; border-radius: 6px; }
+  .compare .label { color: #656d76; font-size: 11px; }
+  .compare .val { font-size: 16px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>Polymarket Paper Trader</h1>
+<div class="subtitle">Last updated: 2026-05-12 17:06 UTC · Cycle #0 · Started — · Auto-refresh 60s</div>
+
+<div class="grid">
+  <div class="card">
+    <h3>Total Net PnL</h3>
+    <div class="val grey">$+0.00</div>
+    <div class="sub">Across 0 closed trades · $0.00 fees paid</div>
+  </div>
+  <div class="card">
+    <h3>Win Rate</h3>
+    <div class="val">0.0%</div>
+    <div class="sub">0 wins / 0 trades · expected ~54.3%</div>
+  </div>
+  <div class="card">
+    <h3>Avg Trade</h3>
+    <div class="val grey">$+0.00</div>
+    <div class="sub">expected ~$7.66</div>
+  </div>
+  <div class="card">
+    <h3>Open Positions</h3>
+    <div class="val">0</div>
+    <div class="sub">closed: 0 · cycles: 0</div>
+  </div>
+</div>
+
+<div class="card-wide">
+  <h2 style="margin-top:0">Equity curve</h2>
+  <canvas id="equity"></canvas>
+</div>
+
+<div class="card-wide">
+  <h2 style="margin-top:0">Per-trade PnL distribution</h2>
+  <canvas id="hist"></canvas>
+</div>
+
+<div class="card-wide">
+  <h2 style="margin-top:0">Backtest vs Live comparison</h2>
+  <p style="color:#656d76;font-size:13px;margin:0 0 12px">Honest comparison to extended_v3 (20-month $5k-$50k volume) — the most realistic backtest population.</p>
+  <div class="compare">
+    <div>
+      <div class="label">EXPECTED (backtest)</div>
+      <div class="val">+$7.66/trade · 54.3% win</div>
+    </div>
+    <div>
+      <div class="label">LIVE (paper)</div>
+      <div class="val">$+0.00/trade · 0.0% win</div>
+    </div>
+    <div>
+      <div class="label">DELTA</div>
+      <div class="val">$-7.66/trade · -54.3 pp</div>
+    </div>
+  </div>
+</div>
+
+<div class="card-wide">
+  <h2 style="margin-top:0">Open positions (0)</h2>
+  <table>
+    <thead>
+      <tr><th>Market</th><th>Entry z</th><th>Dir</th><th>Exec px</th><th>Held</th><th>Category</th></tr>
+    </thead>
+    <tbody><tr><td colspan="6" style="text-align:center;color:#999">No open positions</td></tr></tbody>
+  </table>
+</div>
+
+<div class="card-wide">
+  <h2 style="margin-top:0">Recent closed trades (last 25)</h2>
+  <table>
+    <thead>
+      <tr><th>Exit time</th><th>Market</th><th>z</th><th>Dir</th><th>Held</th><th>Exit</th><th>PnL</th></tr>
+    </thead>
+    <tbody><tr><td colspan="7" style="text-align:center;color:#999">No closed trades yet</td></tr></tbody>
+  </table>
+</div>
+
+<script>
+const equityData = {
+    labels: [],
+    datasets: [{
+        label: 'Cumulative PnL ($)',
+        data: [],
+        borderColor: '#0969da',
+        backgroundColor: 'rgba(9, 105, 218, 0.1)',
+        fill: true,
+        tension: 0.1,
+        pointRadius: 2,
+    }]
+};
+new Chart(document.getElementById('equity'), {
+    type: 'line',
+    data: equityData,
+    options: { responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { x: { ticks: { maxTicksLimit: 8 } } } }
+});
+
+// PnL histogram
+const pnls = [];
+if (pnls.length > 0) {
+    const bins = 30;
+    const min = Math.min(...pnls), max = Math.max(...pnls);
+    const range = max - min || 1;
+    const width = range / bins;
+    const buckets = new Array(bins).fill(0);
+    const labels = [];
+    for (let i = 0; i < bins; i++) {
+        labels.push((min + width * (i + 0.5)).toFixed(1));
+    }
+    pnls.forEach(p => {
+        let idx = Math.min(bins - 1, Math.floor((p - min) / width));
+        buckets[idx]++;
+    });
+    new Chart(document.getElementById('hist'), {
+        type: 'bar',
+        data: { labels: labels, datasets: [{
+            label: 'Trade count', data: buckets,
+            backgroundColor: labels.map(l => parseFloat(l) >= 0 ? '#2ea043' : '#cf222e')
+        }] },
+        options: { responsive: true, maintainAspectRatio: false,
+                  plugins: { legend: { display: false } } }
+    });
+} else {
+    document.getElementById('hist').parentElement.innerHTML += '<p style="color:#999;text-align:center">No trades yet</p>';
+}
+document.getElementById('equity').style.height = '300px';
+document.getElementById('hist').style.height = '250px';
+</script>
+
+</body>
+</html>
