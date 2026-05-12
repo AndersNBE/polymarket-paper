@@ -152,6 +152,79 @@ for c in cycles:
     for k, v in (c.get("rejected") or {}).items():
         lifetime_rejections[k] += v
 
+# ── Streak analysis ─────────────────────────────────────────────
+current_streak = 0
+current_streak_type = "neutral"
+if closed:
+    last_sign = 1 if closed[-1].get("net_pnl_usd", 0) > 0 else (-1 if closed[-1].get("net_pnl_usd", 0) < 0 else 0)
+    if last_sign != 0:
+        for t in reversed(closed):
+            sign = 1 if t.get("net_pnl_usd", 0) > 0 else (-1 if t.get("net_pnl_usd", 0) < 0 else 0)
+            if sign != last_sign or sign == 0: break
+            current_streak += 1
+        current_streak_type = "win" if last_sign > 0 else "loss"
+
+# Best/worst single trade
+best_trade = max(closed, key=lambda t: t.get("net_pnl_usd", 0)) if closed else None
+worst_trade = min(closed, key=lambda t: t.get("net_pnl_usd", 0)) if closed else None
+best_pnl = best_trade.get("net_pnl_usd", 0) if best_trade else 0
+worst_pnl = worst_trade.get("net_pnl_usd", 0) if worst_trade else 0
+best_q = escape(str(best_trade.get("question", "—"))[:50]) if best_trade else "no trades yet"
+worst_q = escape(str(worst_trade.get("question", "—"))[:50]) if worst_trade else "no trades yet"
+
+# Calendar heatmap — PnL by day
+daily_pnl = defaultdict(float)
+daily_count = defaultdict(int)
+for t in closed:
+    d = datetime.datetime.fromtimestamp(t.get("exit_ts", 0), datetime.timezone.utc).strftime("%Y-%m-%d")
+    daily_pnl[d] += t.get("net_pnl_usd", 0)
+    daily_count[d] += 1
+
+# Calendar grid: last 21 days
+cal_dates = [(now - datetime.timedelta(days=i)).strftime("%Y-%m-%d") for i in range(20, -1, -1)]
+cal_cells_html = ""
+max_abs_daily = max((abs(daily_pnl[d]) for d in cal_dates), default=1) or 1
+for d in cal_dates:
+    pnl = daily_pnl.get(d, 0)
+    n = daily_count.get(d, 0)
+    if n == 0:
+        bg = "#161b22"
+        title = f"{d}: no trades"
+        txt_color = "#6e7681"
+    else:
+        intensity = min(1.0, abs(pnl) / max_abs_daily)
+        if pnl > 0:
+            bg = f"rgba(63, 185, 80, {0.2 + 0.7*intensity})"
+        elif pnl < 0:
+            bg = f"rgba(248, 81, 73, {0.2 + 0.7*intensity})"
+        else:
+            bg = "#21262d"
+        txt_color = "#e6edf3"
+        title = f"{d}: ${pnl:+.2f} ({n} trades)"
+    weekday = datetime.datetime.strptime(d, "%Y-%m-%d").strftime("%a")[:1]
+    day_num = datetime.datetime.strptime(d, "%Y-%m-%d").strftime("%d")
+    cal_cells_html += f'<div class="cal-cell" style="background:{bg};color:{txt_color}" title="{title}"><span class="cal-day">{day_num}</span><span class="cal-pnl">{f"${pnl:+.0f}" if n>0 else "·"}</span></div>'
+
+# Waterfall: gross → spread → fees → gas → net
+total_gross = sum(t.get("gross_pnl_usd", 0) for t in closed)
+total_fees_only = sum((t.get("entry_fee", 0) + t.get("exit_fee", 0)) for t in closed)
+total_gas = sum((t.get("entry_gas", 0) + t.get("exit_gas", 0)) for t in closed)
+total_spread_est = total_fees - total_fees_only - total_gas  # rough; we lump spread into fees in code
+total_net = sum(t.get("net_pnl_usd", 0) for t in closed)
+
+# Next signal estimate
+if cycles and len(cycles) > 3:
+    recent_signals = sum(c.get("signals_at_z5", 0) for c in cycles[-12:])
+    recent_hours = (cycles[-1]["ts"] - cycles[-12]["ts"]) / 3600 if len(cycles) >= 12 else 1
+    sig_per_hr = recent_signals / recent_hours if recent_hours > 0 else 0
+    next_signal_est = f"~{60/sig_per_hr:.0f}min" if sig_per_hr > 0 else "uncertain"
+else:
+    next_signal_est = "—"
+
+# Capital utilization
+total_deployed = sum(p.get("shares", 0) * (p.get("entry_exec_price", 0) if p.get("direction") == 1 else (1 - p.get("entry_exec_price", 0))) for p in open_positions.values())
+util_pct = 100 * total_deployed / BANKROLL_USD if BANKROLL_USD else 0
+
 # Sparklines for hero (use recent equity if available)
 sparkline_data = equity_y[-30:] if equity_y else []
 
@@ -447,10 +520,39 @@ html = f"""<!DOCTYPE html>
   /* Sparkline */
   .sparkline {{ height: 28px; margin-top: 8px; }}
 
+  /* Insights strip */
+  .insights-grid {{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }}
+  .insight-card {{ display: flex; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; transition: border-color 0.2s, transform 0.2s; }}
+  .insight-card:hover {{ border-color: var(--border-strong); transform: translateY(-1px); }}
+  .insight-icon {{ width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; flex-shrink: 0; }}
+  .insight-body {{ flex: 1; min-width: 0; }}
+  .insight-label {{ font-size: 10px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }}
+  .insight-val {{ font-family: "SF Mono", "Menlo", monospace; font-size: 19px; font-weight: 600; margin-top: 2px; letter-spacing: -0.01em; }}
+  .insight-suffix {{ font-size: 13px; color: var(--text-dim); font-weight: 400; }}
+  .insight-sub {{ font-size: 11px; color: var(--text-mute); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+
+  /* Calendar */
+  .calendar-grid {{ display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }}
+  .cal-cell {{ aspect-ratio: 1.4; border-radius: 6px; padding: 6px; display: flex; flex-direction: column; justify-content: space-between; font-family: "SF Mono", monospace; transition: transform 0.15s; cursor: default; }}
+  .cal-cell:hover {{ transform: scale(1.05); z-index: 5; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }}
+  .cal-day {{ font-size: 10px; opacity: 0.7; }}
+  .cal-pnl {{ font-size: 11px; font-weight: 600; }}
+  .legend-row {{ display: flex; gap: 16px; font-size: 11px; color: var(--text-mute); }}
+  .legend-dot {{ display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }}
+
+  /* Smooth transitions */
+  .card, .hero-cell, .pos-card {{ transition: border-color 0.2s ease; }}
+  .card:hover {{ border-color: var(--border-strong); }}
+
+  @media (max-width: 1100px) {{
+    .insights-grid {{ grid-template-columns: repeat(3, 1fr); }}
+  }}
   @media (max-width: 900px) {{
     .hero {{ grid-template-columns: 1fr 1fr; }}
     .row-2-1, .row-1-1, .row-1-1-1 {{ grid-template-columns: 1fr; }}
     .pos-stats {{ grid-template-columns: repeat(2, 1fr); }}
+    .insights-grid {{ grid-template-columns: 1fr 1fr; }}
+    .calendar-grid {{ grid-template-columns: repeat(7, 1fr); }}
   }}
 </style>
 </head>
@@ -503,6 +605,77 @@ html = f"""<!DOCTYPE html>
       <div class="hero-label">Open Positions</div>
       <div class="hero-value mono">{n_open}<span style="font-size:18px;color:var(--text-dim)">/10</span></div>
       <div class="hero-sub">${sum((p.get('shares',0) * (p.get('entry_exec_price',0) if p.get('direction')==1 else (1-p.get('entry_exec_price',0)))) for p in open_positions.values()):.0f} deployed of ${BANKROLL_USD}</div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS STRIP -->
+  <div class="insights-grid">
+    <div class="insight-card">
+      <div class="insight-icon" style="background:{'#3fb950' if current_streak_type == 'win' else '#f85149' if current_streak_type == 'loss' else '#7d8590'}33;color:{'#3fb950' if current_streak_type == 'win' else '#f85149' if current_streak_type == 'loss' else '#7d8590'}">{'W' if current_streak_type == 'win' else 'L' if current_streak_type == 'loss' else '—'}</div>
+      <div class="insight-body">
+        <div class="insight-label">Current streak</div>
+        <div class="insight-val">{current_streak if current_streak_type != 'neutral' else 0}<span class="insight-suffix"> {('wins' if current_streak_type == 'win' else 'losses' if current_streak_type == 'loss' else 'trades')}</span></div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#58a6ff33;color:#58a6ff">★</div>
+      <div class="insight-body">
+        <div class="insight-label">Best single trade</div>
+        <div class="insight-val" style="color:#3fb950">${best_pnl:+.2f}</div>
+        <div class="insight-sub">{best_q}</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#f8514933;color:#f85149">▼</div>
+      <div class="insight-body">
+        <div class="insight-label">Worst single trade</div>
+        <div class="insight-val" style="color:#f85149">${worst_pnl:+.2f}</div>
+        <div class="insight-sub">{worst_q}</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#d2992233;color:#d29922">⏱</div>
+      <div class="insight-body">
+        <div class="insight-label">Next signal expected</div>
+        <div class="insight-val">{next_signal_est}</div>
+        <div class="insight-sub">{(f'{total_signals_seen} signals seen lifetime') if total_signals_seen else 'no historical data'}</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#a371f733;color:#a371f7">⚖</div>
+      <div class="insight-body">
+        <div class="insight-label">Capital deployed</div>
+        <div class="insight-val">{util_pct:.0f}<span class="insight-suffix">%</span></div>
+        <div class="insight-sub">${total_deployed:.0f} of ${BANKROLL_USD} bankroll</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR + WATERFALL -->
+  <div class="row-2-1">
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-row">📅 Daily PnL — last 21 days</div>
+        <span style="color:var(--text-mute);font-size:11px">brightness = magnitude</span>
+      </div>
+      <div class="calendar-grid">
+        {cal_cells_html}
+      </div>
+      <div class="legend-row" style="margin-top:10px">
+        <div><span class="legend-dot" style="background:rgba(248,81,73,0.7)"></span>Loss</div>
+        <div><span class="legend-dot" style="background:#161b22;border:1px solid var(--border)"></span>No trades</div>
+        <div><span class="legend-dot" style="background:rgba(63,185,80,0.7)"></span>Profit</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">💵 PnL waterfall</div>
+      <div class="chart-cell"><canvas id="waterfall"></canvas></div>
+      <div class="stat-bar" style="font-size:11px">
+        <div>Gross <strong style="color:{color_for(total_gross)}">${total_gross:+.2f}</strong></div>
+        <div>− Fees <strong style="color:var(--red)">${total_fees_only:.2f}</strong></div>
+        <div>− Gas <strong style="color:var(--red)">${total_gas:.2f}</strong></div>
+        <div>= Net <strong style="color:{color_for(total_net)}">${total_net:+.2f}</strong></div>
+      </div>
     </div>
   </div>
 
@@ -720,6 +893,34 @@ new Chart(document.getElementById('forecast'), {{
     ] }},
     options: {{ ...COMMON, scales: {{ y: {{ ticks: {{ callback: (v) => '$' + v }} }} }} }}
 }});
+
+// Waterfall: gross → -fees → -gas → net
+const wGross = {total_gross};
+const wFees = {total_fees_only};
+const wGas = {total_gas};
+const wNet = {total_net};
+if (wGross !== 0 || wFees !== 0 || wGas !== 0) {{
+    new Chart(document.getElementById('waterfall'), {{
+        type: 'bar',
+        data: {{
+            labels: ['Gross', '− Fees', '− Gas', 'Net'],
+            datasets: [{{
+                data: [wGross, -wFees, -wGas, wNet],
+                backgroundColor: [
+                    wGross >= 0 ? DARK.green + 'cc' : DARK.red + 'cc',
+                    DARK.red + 'aa',
+                    DARK.red + 'aa',
+                    wNet >= 0 ? DARK.green : DARK.red
+                ],
+                borderWidth: 0,
+                borderRadius: 4,
+            }}]
+        }},
+        options: {{ ...COMMON, scales: {{ y: {{ ticks: {{ callback: (v) => '$' + v }} }} }} }}
+    }});
+}} else {{
+    document.getElementById('waterfall').parentElement.innerHTML += '<div class="empty-state-small">No trades yet</div>';
+}}
 
 // PnL histogram
 const pnls = {json.dumps(pnls)};

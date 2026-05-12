@@ -121,10 +121,39 @@
   /* Sparkline */
   .sparkline { height: 28px; margin-top: 8px; }
 
+  /* Insights strip */
+  .insights-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
+  .insight-card { display: flex; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; transition: border-color 0.2s, transform 0.2s; }
+  .insight-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .insight-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; flex-shrink: 0; }
+  .insight-body { flex: 1; min-width: 0; }
+  .insight-label { font-size: 10px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+  .insight-val { font-family: "SF Mono", "Menlo", monospace; font-size: 19px; font-weight: 600; margin-top: 2px; letter-spacing: -0.01em; }
+  .insight-suffix { font-size: 13px; color: var(--text-dim); font-weight: 400; }
+  .insight-sub { font-size: 11px; color: var(--text-mute); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Calendar */
+  .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-cell { aspect-ratio: 1.4; border-radius: 6px; padding: 6px; display: flex; flex-direction: column; justify-content: space-between; font-family: "SF Mono", monospace; transition: transform 0.15s; cursor: default; }
+  .cal-cell:hover { transform: scale(1.05); z-index: 5; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  .cal-day { font-size: 10px; opacity: 0.7; }
+  .cal-pnl { font-size: 11px; font-weight: 600; }
+  .legend-row { display: flex; gap: 16px; font-size: 11px; color: var(--text-mute); }
+  .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+
+  /* Smooth transitions */
+  .card, .hero-cell, .pos-card { transition: border-color 0.2s ease; }
+  .card:hover { border-color: var(--border-strong); }
+
+  @media (max-width: 1100px) {
+    .insights-grid { grid-template-columns: repeat(3, 1fr); }
+  }
   @media (max-width: 900px) {
     .hero { grid-template-columns: 1fr 1fr; }
     .row-2-1, .row-1-1, .row-1-1-1 { grid-template-columns: 1fr; }
     .pos-stats { grid-template-columns: repeat(2, 1fr); }
+    .insights-grid { grid-template-columns: 1fr 1fr; }
+    .calendar-grid { grid-template-columns: repeat(7, 1fr); }
   }
 </style>
 </head>
@@ -136,7 +165,7 @@
       <div class="logo-mark">P</div>
       <div class="logo-text">
         <h1>Polymarket Paper Trader</h1>
-        <div class="sub">2026-05-12 17:48:01 UTC · Cycle #0 · Started —</div>
+        <div class="sub">2026-05-12 17:57:07 UTC · Cycle #0 · Started —</div>
       </div>
     </div>
     <div class="live-pill">
@@ -177,6 +206,77 @@
       <div class="hero-label">Open Positions</div>
       <div class="hero-value mono">0<span style="font-size:18px;color:var(--text-dim)">/10</span></div>
       <div class="hero-sub">$0 deployed of $720</div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS STRIP -->
+  <div class="insights-grid">
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#7d859033;color:#7d8590">—</div>
+      <div class="insight-body">
+        <div class="insight-label">Current streak</div>
+        <div class="insight-val">0<span class="insight-suffix"> trades</span></div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#58a6ff33;color:#58a6ff">★</div>
+      <div class="insight-body">
+        <div class="insight-label">Best single trade</div>
+        <div class="insight-val" style="color:#3fb950">$+0.00</div>
+        <div class="insight-sub">no trades yet</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#f8514933;color:#f85149">▼</div>
+      <div class="insight-body">
+        <div class="insight-label">Worst single trade</div>
+        <div class="insight-val" style="color:#f85149">$+0.00</div>
+        <div class="insight-sub">no trades yet</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#d2992233;color:#d29922">⏱</div>
+      <div class="insight-body">
+        <div class="insight-label">Next signal expected</div>
+        <div class="insight-val">—</div>
+        <div class="insight-sub">no historical data</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#a371f733;color:#a371f7">⚖</div>
+      <div class="insight-body">
+        <div class="insight-label">Capital deployed</div>
+        <div class="insight-val">0<span class="insight-suffix">%</span></div>
+        <div class="insight-sub">$0 of $720 bankroll</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR + WATERFALL -->
+  <div class="row-2-1">
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-row">📅 Daily PnL — last 21 days</div>
+        <span style="color:var(--text-mute);font-size:11px">brightness = magnitude</span>
+      </div>
+      <div class="calendar-grid">
+        <div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-04-22: no trades"><span class="cal-day">22</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-04-23: no trades"><span class="cal-day">23</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-04-24: no trades"><span class="cal-day">24</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-04-25: no trades"><span class="cal-day">25</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-04-26: no trades"><span class="cal-day">26</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-04-27: no trades"><span class="cal-day">27</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-04-28: no trades"><span class="cal-day">28</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-04-29: no trades"><span class="cal-day">29</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-04-30: no trades"><span class="cal-day">30</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-01: no trades"><span class="cal-day">01</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-02: no trades"><span class="cal-day">02</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-03: no trades"><span class="cal-day">03</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-04: no trades"><span class="cal-day">04</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-05: no trades"><span class="cal-day">05</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-06: no trades"><span class="cal-day">06</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-07: no trades"><span class="cal-day">07</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-08: no trades"><span class="cal-day">08</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-09: no trades"><span class="cal-day">09</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-10: no trades"><span class="cal-day">10</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-11: no trades"><span class="cal-day">11</span><span class="cal-pnl">·</span></div><div class="cal-cell" style="background:#161b22;color:#6e7681" title="2026-05-12: no trades"><span class="cal-day">12</span><span class="cal-pnl">·</span></div>
+      </div>
+      <div class="legend-row" style="margin-top:10px">
+        <div><span class="legend-dot" style="background:rgba(248,81,73,0.7)"></span>Loss</div>
+        <div><span class="legend-dot" style="background:#161b22;border:1px solid var(--border)"></span>No trades</div>
+        <div><span class="legend-dot" style="background:rgba(63,185,80,0.7)"></span>Profit</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">💵 PnL waterfall</div>
+      <div class="chart-cell"><canvas id="waterfall"></canvas></div>
+      <div class="stat-bar" style="font-size:11px">
+        <div>Gross <strong style="color:#7d8590">$+0.00</strong></div>
+        <div>− Fees <strong style="color:var(--red)">$0.00</strong></div>
+        <div>− Gas <strong style="color:var(--red)">$0.00</strong></div>
+        <div>= Net <strong style="color:#7d8590">$+0.00</strong></div>
+      </div>
     </div>
   </div>
 
@@ -394,6 +494,34 @@ new Chart(document.getElementById('forecast'), {
     ] },
     options: { ...COMMON, scales: { y: { ticks: { callback: (v) => '$' + v } } } }
 });
+
+// Waterfall: gross → -fees → -gas → net
+const wGross = 0;
+const wFees = 0;
+const wGas = 0;
+const wNet = 0;
+if (wGross !== 0 || wFees !== 0 || wGas !== 0) {
+    new Chart(document.getElementById('waterfall'), {
+        type: 'bar',
+        data: {
+            labels: ['Gross', '− Fees', '− Gas', 'Net'],
+            datasets: [{
+                data: [wGross, -wFees, -wGas, wNet],
+                backgroundColor: [
+                    wGross >= 0 ? DARK.green + 'cc' : DARK.red + 'cc',
+                    DARK.red + 'aa',
+                    DARK.red + 'aa',
+                    wNet >= 0 ? DARK.green : DARK.red
+                ],
+                borderWidth: 0,
+                borderRadius: 4,
+            }]
+        },
+        options: { ...COMMON, scales: { y: { ticks: { callback: (v) => '$' + v } } } }
+    });
+} else {
+    document.getElementById('waterfall').parentElement.innerHTML += '<div class="empty-state-small">No trades yet</div>';
+}
 
 // PnL histogram
 const pnls = [];
