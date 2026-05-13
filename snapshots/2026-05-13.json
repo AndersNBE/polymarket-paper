@@ -1,0 +1,45 @@
+{
+  "date": "2026-05-13",
+  "ts": 1778630591,
+  "cycle": 19,
+  "universe_size": 3181,
+  "open_positions_count": 3,
+  "open_positions_summary": [
+    {
+      "market_id": "2225405",
+      "question": "Bitcoin Up or Down - May 12, 6PM ET",
+      "entry_z": 8.155057547330047,
+      "entry_exec_price": 0.66,
+      "direction": -1,
+      "shares": 90.90909090909092,
+      "held_hours": 1.7533333333333334,
+      "clv_value": -0.362,
+      "dte": 0.029189814814814814
+    },
+    {
+      "market_id": "2225420",
+      "question": "Ethereum Up or Down - May 12, 6PM ET",
+      "entry_z": 8.429939882593166,
+      "entry_exec_price": 0.67,
+      "direction": -1,
+      "shares": 93.75000000000001,
+      "held_hours": 1.7533333333333334,
+      "clv_value": 0.585,
+      "dte": 0.02917824074074074
+    },
+    {
+      "market_id": "2167930",
+      "question": "Will Atl\u00e9tico Nacional win on 2026-05-12?",
+      "entry_z": -5.424299178947797,
+      "entry_exec_price": 0.66,
+      "direction": 1,
+      "shares": 46.15384615384615,
+      "held_hours": 0.7375,
+      "clv_value": -0.33,
+      "dte": 0.0007407407407407407
+    }
+  ],
+  "trades_total": 1,
+  "pnl_cumulative": -31.90510935217146,
+  "win_rate": 0.0
+}
