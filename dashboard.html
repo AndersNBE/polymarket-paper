@@ -199,14 +199,14 @@
       <div class="logo-mark">P</div>
       <div class="logo-text">
         <h1>Polymarket Paper Trader</h1>
-        <div class="sub">2026-05-13 00:33:15 UTC · Cycle #21 · Started 2026-05-12</div>
+        <div class="sub">2026-05-13 00:46:20 UTC · Cycle #22 · Started 2026-05-12</div>
       </div>
     </div>
     <div class="live-pill">
       <span class="live-dot"></span>
       <span style="color:#3fb950;font-weight:600">LIVE</span>
       <span style="color:var(--text-mute)">·</span>
-      <span style="color:var(--text-dim)">0m ago</span>
+      <span style="color:var(--text-dim)">13m ago</span>
     </div>
   </header>
 
@@ -407,7 +407,7 @@
             <div class="pos-stat"><span class="pos-stat-label">Entry</span><span class="pos-stat-val">$0.660</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Spread</span><span class="pos-stat-val">1.0¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Stake</span><span class="pos-stat-val">$30</span></div>
-            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.2h</span></div>
+            <div class="pos-stat"><span class="pos-stat-label">Held</span><span class="pos-stat-val">1.5h</span></div>
             <div class="pos-stat"><span class="pos-stat-label">DTE</span><span class="pos-stat-val">0d</span></div>
             <div class="pos-stat"><span class="pos-stat-label">CLV</span><span class="pos-stat-val" style="color:#f85149">-33.00¢</span></div>
             <div class="pos-stat"><span class="pos-stat-label">Category</span><span class="pos-stat-val">sports</span></div>
@@ -783,7 +783,7 @@
 
   <footer>
     <div>Auto-refresh 60s · v1 strategy (z≥5, both directions, max 48h hold)</div>
-    <div>3 closed · 1 open · 21 cycles</div>
+    <div>3 closed · 1 open · 22 cycles</div>
   </footer>
 
 </div>
@@ -912,7 +912,7 @@ if (wGross !== 0 || wFees !== 0 || wGas !== 0) {
 }
 
 // ── Per-position price trajectory charts ──
-const POSITION_CHARTS = {"2167930": {"bars": [{"t": 1778587205, "p": 0.675}, {"t": 1778590805, "p": 0.675}, {"t": 1778594406, "p": 0.675}, {"t": 1778598006, "p": 0.675}, {"t": 1778601605, "p": 0.67}, {"t": 1778605224, "p": 0.67}, {"t": 1778608805, "p": 0.665}, {"t": 1778612408, "p": 0.665}, {"t": 1778616008, "p": 0.665}, {"t": 1778619604, "p": 0.675}, {"t": 1778623209, "p": 0.675}, {"t": 1778626805, "p": 0.665}, {"t": 1778630408, "p": 0.595}, {"t": 1778632329, "p": 0.975}], "entry_ts": 1778627936, "entry_price": 0.66, "entry_mid": 0.645, "direction": 1, "entry_z": -5.424299178947797}};
+const POSITION_CHARTS = {"2167930": {"bars": [{"t": 1778587205, "p": 0.675}, {"t": 1778590805, "p": 0.675}, {"t": 1778594406, "p": 0.675}, {"t": 1778598006, "p": 0.675}, {"t": 1778601605, "p": 0.67}, {"t": 1778605224, "p": 0.67}, {"t": 1778608805, "p": 0.665}, {"t": 1778612408, "p": 0.665}, {"t": 1778616008, "p": 0.665}, {"t": 1778619604, "p": 0.675}, {"t": 1778623209, "p": 0.675}, {"t": 1778626805, "p": 0.665}, {"t": 1778630408, "p": 0.595}, {"t": 1778633163, "p": 0.99}], "entry_ts": 1778627936, "entry_price": 0.66, "entry_mid": 0.645, "direction": 1, "entry_z": -5.424299178947797}};
 
 Object.keys(POSITION_CHARTS).forEach(mid => {
     const data = POSITION_CHARTS[mid];
