@@ -1,0 +1,100 @@
+{
+  "date": "2026-05-14",
+  "ts": 1778717014,
+  "cycle": 121,
+  "universe_size": 3149,
+  "open_positions_count": 8,
+  "open_positions_summary": [
+    {
+      "market_id": "1822537",
+      "question": "Will Ken Sim win the 2026 Vancouver mayoral election?",
+      "entry_z": 5.045859411194418,
+      "entry_exec_price": 0.31000000000000005,
+      "direction": -1,
+      "shares": 44.117647058823536,
+      "held_hours": 19.264166666666668,
+      "clv_value": 0.0050000000000000044,
+      "dte": 156.80020833333333
+    },
+    {
+      "market_id": "2197282",
+      "question": "LoL: T1 Academy vs DN SOOPers Challengers (BO3) - LCK Challengers League Rounds 1-2",
+      "entry_z": -5.629176031159797,
+      "entry_exec_price": 0.61,
+      "direction": 1,
+      "shares": 50.0,
+      "held_hours": 17.758055555555554,
+      "clv_value": 0.010000000000000009,
+      "dte": 1.1957754629629629
+    },
+    {
+      "market_id": "2197283",
+      "question": "LoL: T1 Academy vs DN SOOPers Challengers - Game 1 Winner",
+      "entry_z": -7.693426492065228,
+      "entry_exec_price": 0.58,
+      "direction": 1,
+      "shares": 52.631578947368425,
+      "held_hours": 17.506666666666668,
+      "clv_value": -0.030000000000000027,
+      "dte": 1.1019675925925927
+    },
+    {
+      "market_id": "2197284",
+      "question": "LoL: T1 Academy vs DN SOOPers Challengers - Game 2 Winner",
+      "entry_z": -14.276010271561963,
+      "entry_exec_price": 0.5700000000000001,
+      "direction": 1,
+      "shares": 53.57142857142857,
+      "held_hours": 17.259722222222223,
+      "clv_value": -0.020000000000000018,
+      "dte": 1.0916782407407408
+    },
+    {
+      "market_id": "2172309",
+      "question": "Will Club Atl\u00e9tico de Madrid win on 2026-05-17?",
+      "entry_z": 6.425396041156837,
+      "entry_exec_price": 0.5599999999999999,
+      "direction": -1,
+      "shares": 69.76744186046511,
+      "held_hours": 15.256944444444445,
+      "clv_value": -0.0,
+      "dte": 4.3415625
+    },
+    {
+      "market_id": "898654",
+      "question": "Will Flavio Bolsonaro qualify for Brazil's presidential runoff?",
+      "entry_z": -31.530489206460352,
+      "entry_exec_price": 0.7053642384105959,
+      "direction": 1,
+      "shares": 43.14285714285715,
+      "held_hours": 4.503611111111111,
+      "clv_value": -0.03499999999999992,
+      "dte": 143.1851851851852
+    },
+    {
+      "market_id": "2152411",
+      "question": "Will Paris FC win on 2026-05-17?",
+      "entry_z": 5.110085196089893,
+      "entry_exec_price": 0.14,
+      "direction": -1,
+      "shares": 35.294117647058826,
+      "held_hours": 3.754722222222222,
+      "clv_value": -0.024999999999999994,
+      "dte": 3.945636574074074
+    },
+    {
+      "market_id": "1390364",
+      "question": "Will Australia be in the top 5 at Eurovision 2026?",
+      "entry_z": 5.050674882645523,
+      "entry_exec_price": 0.5543564356435644,
+      "direction": -1,
+      "shares": 68.86363636363637,
+      "held_hours": 1.738611111111111,
+      "clv_value": -0.07499999999999996,
+      "dte": 2.069965277777778
+    }
+  ],
+  "trades_total": 14,
+  "pnl_cumulative": -132.37769465329603,
+  "win_rate": 28.57142857142857
+}
