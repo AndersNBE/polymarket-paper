@@ -199,7 +199,7 @@
       <div class="logo-mark">P</div>
       <div class="logo-text">
         <h1>Polymarket Paper Trader</h1>
-        <div class="sub">2026-06-15 18:42:37 UTC · Cycle #753 · Started 2026-05-12</div>
+        <div class="sub">2026-06-15 22:22:39 UTC · Cycle #754 · Started 2026-05-12</div>
       </div>
     </div>
     <div class="live-pill">
@@ -440,6 +440,15 @@
           </thead>
           <tbody>
         <tr>
+            <td class="mono">06-15 22:22</td>
+            <td class="mono">#754</td>
+            <td class="mono num">10</td>
+            <td class="mono num" style="color:#7d8590">0</td>
+            <td class="mono num" style="color:#7d8590">0</td>
+            <td class="mono num" style="color:#7d8590">0</td>
+            <td><span class="chip">no signal: 8</span> <span class="chip">z too low: 2</span></td>
+        </tr>
+        <tr>
             <td class="mono">06-15 18:42</td>
             <td class="mono">#753</td>
             <td class="mono num">9</td>
@@ -609,15 +618,6 @@
             <td class="mono num" style="color:#7d8590">0</td>
             <td class="mono num" style="color:#7d8590">0</td>
             <td><span class="chip">no signal: 5</span> <span class="chip">z too low: 2</span></td>
-        </tr>
-        <tr>
-            <td class="mono">06-12 23:21</td>
-            <td class="mono">#734</td>
-            <td class="mono num">7</td>
-            <td class="mono num" style="color:#7d8590">0</td>
-            <td class="mono num" style="color:#7d8590">0</td>
-            <td class="mono num" style="color:#7d8590">0</td>
-            <td><span class="chip">no signal: 6</span> <span class="chip">z too low: 1</span></td>
         </tr></tbody>
         </table>
       </div>
@@ -626,12 +626,12 @@
     <div class="card">
       <div class="card-title">📊 Lifetime totals</div>
       <div style="display:grid;grid-template-columns:1fr;gap:12px;font-size:13px">
-        <div><div style="color:var(--text-mute);font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Markets scanned</div><div class="mono" style="font-size:22px;font-weight:600">277,925</div></div>
+        <div><div style="color:var(--text-mute);font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Markets scanned</div><div class="mono" style="font-size:22px;font-weight:600">277,935</div></div>
         <div><div style="color:var(--text-mute);font-size:11px;text-transform:uppercase;letter-spacing:0.05em">z≥5 signals seen</div><div class="mono" style="font-size:22px;font-weight:600">994</div></div>
         <div><div style="color:var(--text-mute);font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Conversion (signals → entries)</div><div class="mono" style="font-size:22px;font-weight:600">4.5%</div></div>
         <div><div style="color:var(--text-mute);font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Filter rejection split</div>
           <div style="margin-top:4px">
-            <span class="chip" style="margin:2px 4px 2px 0">max positions: <strong style="color:var(--text)">238,486</strong></span><span class="chip" style="margin:2px 4px 2px 0">no signal: <strong style="color:var(--text)">152,020</strong></span><span class="chip" style="margin:2px 4px 2px 0">z too low: <strong style="color:var(--text)">117,811</strong></span><span class="chip" style="margin:2px 4px 2px 0">no history: <strong style="color:var(--text)">7,100</strong></span><span class="chip" style="margin:2px 4px 2px 0">dte filter: <strong style="color:var(--text)">396</strong></span><span class="chip" style="margin:2px 4px 2px 0">price boundary: <strong style="color:var(--text)">371</strong></span><span class="chip" style="margin:2px 4px 2px 0">entry failed book: <strong style="color:var(--text)">182</strong></span>
+            <span class="chip" style="margin:2px 4px 2px 0">max positions: <strong style="color:var(--text)">238,486</strong></span><span class="chip" style="margin:2px 4px 2px 0">no signal: <strong style="color:var(--text)">152,028</strong></span><span class="chip" style="margin:2px 4px 2px 0">z too low: <strong style="color:var(--text)">117,813</strong></span><span class="chip" style="margin:2px 4px 2px 0">no history: <strong style="color:var(--text)">7,100</strong></span><span class="chip" style="margin:2px 4px 2px 0">dte filter: <strong style="color:var(--text)">396</strong></span><span class="chip" style="margin:2px 4px 2px 0">price boundary: <strong style="color:var(--text)">371</strong></span><span class="chip" style="margin:2px 4px 2px 0">entry failed book: <strong style="color:var(--text)">182</strong></span>
           </div>
         </div>
       </div>
@@ -1159,7 +1159,7 @@
 
   <footer>
     <div>Auto-refresh 60s · v1 strategy (z≥5, both directions, max 48h hold)</div>
-    <div>35 closed · 0 open · 753 cycles</div>
+    <div>35 closed · 0 open · 754 cycles</div>
   </footer>
 
 </div>
@@ -1341,7 +1341,7 @@ Object.keys(POSITION_CHARTS).forEach(mid => {
 });
 
 // ── Per-CLOSED-position charts with entry+exit markers ──
-const CLOSED_CHARTS = [{"id": "closedchart_1395171_1778857248", "bars": [{"t": 1778871609, "p": 0.247}, {"t": 1778875209, "p": 0.244}, {"t": 1778878812, "p": 0.2485}, {"t": 1778882408, "p": 0.2475}, {"t": 1778886010, "p": 0.242}, {"t": 1778889619, "p": 0.239}, {"t": 1778893211, "p": 0.2155}, {"t": 1778896807, "p": 0.2155}, {"t": 1778900423, "p": 0.2145}], "entry_ts": 1778736798, "exit_ts": 1778857248, "entry_price": 0.18481418581418574, "exit_price": 0.25806632790637757, "entry_mid": 0.1965, "exit_mid": 0.237, "direction": -1, "pnl": -3.377279927838366}];
+const CLOSED_CHARTS = [{"id": "closedchart_1395171_1778857248", "bars": [{"t": 1778886010, "p": 0.242}, {"t": 1778889619, "p": 0.239}, {"t": 1778893211, "p": 0.2155}, {"t": 1778896807, "p": 0.2155}, {"t": 1778900423, "p": 0.2145}], "entry_ts": 1778736798, "exit_ts": 1778857248, "entry_price": 0.18481418581418574, "exit_price": 0.25806632790637757, "entry_mid": 0.1965, "exit_mid": 0.237, "direction": -1, "pnl": -3.377279927838366}];
 CLOSED_CHARTS.forEach(d => {
     const el = document.getElementById(d.id);
     if (!el || !d.bars || d.bars.length < 2) return;
